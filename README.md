@@ -1,22 +1,23 @@
 # VeritasChain
 
-A Git-like version control system for tracking events (news, economic, scientific) with logical reasoning support and transparent confidence calculation, designed with blockchain-ready architecture for future decentralization.
+A Git-like version control system for tracking both **factual events** (news, economic, scientific) and **normative clauses** (legal, contractual) with unified logical reasoning support and transparent confidence calculation, designed with blockchain-ready architecture for future decentralization.
 
 ## Vision
 
-Create a tamper-proof, decentralized system for tracking news events where:
+Create a tamper-proof, decentralized system for tracking both factual events and normative clauses where:
 - Every change is cryptographically signed and traceable
 - Multiple sources can be compared and conflicts resolved
 - Historical timelines can be reconstructed with full provenance
-- Future migration to blockchain enables trustless collaboration
+- Legal clauses and contracts can be versioned and cross-referenced
+- Future migration to blockchain enables trustless collaboration and smart contract integration
 
 ## Development Roadmap
 
-### Phase 1: Foundation (Weeks 1-4) ✅
-**Goal**: Local Git-like functionality with TypeScript
+### Phase 1: Foundation + Legal Support (Weeks 1-4) ✅
+**Goal**: Local Git-like functionality with both fact and norm support
 
+**Core Infrastructure:**
 - [ ] TypeScript project setup with strict configuration
-- [ ] Core type definitions (flexible, no strict validation)
 - [ ] SHA-256 content-addressing system
 - [ ] File-based storage with `.git-events/` structure
 - [ ] Basic CLI: init, add, commit, log
@@ -24,36 +25,54 @@ Create a tamper-proof, decentralized system for tracking news events where:
 - [ ] Pattern observation (no validation)
 - [ ] 100% test coverage for core modules
 
-**Deliverable**: Working local repository with Git-like operations and simple confidence metrics
+**PHASE 1 ADDITION: Legal Clause Support**
+- [x] Event `kind: 'fact' | 'norm'` discriminator
+- [x] Deontic action types (`shall`, `may`, `must-not`, `liable-for`, `entitled-to`)
+- [x] Legal modifiers (`jurisdiction`, `effectiveDate`, `sunsetDate`, `normForce`)
+- [x] Legal relationships (`amends`, `supersedes`, `refersTo`, `dependentOn`)
+- [x] Legal hierarchy weights (constitution→statute→regulation→case-law→contract→policy)
+- [x] Unified confidence formula supports both fact and norm sources
 
-### Phase 2: Advanced Features (Weeks 5-8) 🚧
-**Goal**: Branch management and pattern learning
+**Deliverable**: Working repository that can store/query both factual events and legal clauses
+
+### Phase 2: Engineering & Scale (Weeks 5-8) 🚧
+**Goal**: Robust tooling and indexing for large datasets
 
 - [ ] Branch creation and switching
 - [ ] Three-way merge algorithm for events
 - [ ] Conflict detection and resolution
 - [ ] Event diff visualization
 - [ ] HTTP API with Express
-- [ ] Pattern analysis from collected data
-- [ ] Initial type inference (not enforcement)
+- [ ] CNL template parsing for legal clauses ("X shall Y" → DeonticSVO)
+- [ ] Jurisdiction + effectiveDate indexing for legal queries
+- [ ] Frontend timeline visualization with amendment chains
 
-**Deliverable**: Full version control with branching and data-driven insights
+**Deliverable**: Production-ready version control with legal clause parsing
 
-### Phase 3: Intelligence Layer (Weeks 9-12) 📋
-**Goal**: Smart features based on learned patterns
+### Phase 3: Quality & Automation (Weeks 9-12) 📋
+**Goal**: ML-driven validation and self-correction
 
-- [ ] Type validation based on observed patterns
+- [ ] Weak-Supervision IE for automatic Clause-IE extraction
 - [ ] Statement validation (SVO + logical clauses) - learned, not hardcoded
-- [ ] Entity/Action object linking and versioning
-- [ ] Temporal and spatial modifiers
-- [ ] Semantic search across events
-- [ ] Truth discovery for conflicting sources
+- [ ] Multi-source confidence calibration for legal clauses
+- [ ] Hohfeld rights/duties inference module
+- [ ] Semantic search across fact/norm knowledge base
+- [ ] Causal chain analysis and conflict resolution
 
-**Deliverable**: Intelligent system that understands data patterns
+**Deliverable**: Self-improving system with automated legal reasoning
 
-### Phase 4: Decentralization Prep (Weeks 13-16) 🔗
-**Goal**: Blockchain-ready architecture
+### Phase 4: Legal Applications & Blockchain Prep (Weeks 13-16) 🔗
+**Goal**: High-value legal use cases + blockchain architecture
 
+**Legal Applications:**
+- [ ] Compliance monitoring ("7-day effective mandatory export controls" → supply chain alerts)
+- [ ] Dynamic contract execution (norm + fact events → automated settlement)
+- [ ] Legal RAG/QA system ("Singapore paternity leave days?" → structured norm retrieval)
+- [ ] Smart contract oracles (norm hashes on-chain, fact confidence ≥0.9 triggers execution)
+- [ ] LegalBench evaluation datasets (structured clause extraction benchmarks)
+- [ ] Policy impact analysis (PageRank on amends/supersedes chains)
+
+**Blockchain Integration:**
 - [ ] Ed25519 signature implementation
 - [ ] Merkle tree for event batches
 - [ ] IPFS integration for content storage
@@ -61,7 +80,7 @@ Create a tamper-proof, decentralized system for tracking news events where:
 - [ ] Migration tools for existing data
 - [ ] Testnet deployment guide
 
-**Deliverable**: Hybrid system ready for blockchain migration
+**Deliverable**: Production legal applications + blockchain-ready hybrid system
 
 ### Phase 5: Blockchain Migration (Months 5-6) 🚀
 **Goal**: Full decentralization
@@ -437,9 +456,11 @@ console.log(`Committed: ${commit.id}`);
 - **Language**: TypeScript 5+ with strict mode (no `any` allowed)
 - **Storage**: File system (JSON) with `.git-events/` structure
 - **Hashing**: SHA-256 content addressing (@noble/hashes)
-- **Confidence**: Auto-calculated (1-V)×E×S - never manual
+- **Event Types**: Both `kind='fact'` (news/events) and `kind='norm'` (legal clauses)
+- **Confidence**: Auto-calculated (1-V)×E×S for both facts and norms
 - **ID System**: Dual IDs - @id (content hash) + logicalId (UUID grouping)
-- **Statements**: Unified SVO + logical operators (AND, OR, NOT, IMPLIES, etc.)
+- **Statements**: Unified SVO + logical operators + deontic actions
+- **Legal Support**: Jurisdiction, effectiveDate, normForce, legal hierarchy weights
 - **Versioning**: All objects (Entity/Action/Event) are version-controlled
 - **API**: Express.js with `/v1/` versioned endpoints
 - **Testing**: Jest with ts-jest (100% coverage requirement)
@@ -460,11 +481,11 @@ console.log(`Committed: ${commit.id}`);
 ## Design Philosophy
 
 ### Start Simple, Learn from Data
-Rather than imposing a rigid type system upfront, the system observes patterns in real data:
+Rather than imposing a rigid type system upfront, the system observes patterns in real data (both factual events and legal clauses):
 
-1. **Phase 1**: Record everything, validate nothing
-2. **Phase 2**: Identify patterns, suggest types
-3. **Phase 3**: Enforce learned constraints
+1. **Phase 1**: Record both facts and norms, minimal validation (basic enums only)
+2. **Phase 2**: Identify patterns in legal reasoning and factual relationships
+3. **Phase 3**: Enforce learned constraints for both domains
 
 ### Confidence Through Transparency
 Confidence uses a simple multiplication formula: `(1 - Volatility) × Evidence × Source`. This ensures transparency and removes arbitrary weights.
@@ -476,10 +497,13 @@ const confidence = (1 - volatility) * evidenceFactor * sourceFactor;
 // Where:
 // V = volatility (0-1, from change frequency analysis)
 // E = evidence quality (0-1, based on supporting data)
-// S = source reliability (0-1, based on source type and history)
+// S = source reliability (0-1):
+//     For facts: based on source type (Academic=1.0, NewsAgency=0.9, Social=0.7)
+//     For norms: based on legal hierarchy (Constitution=1.0, Statute=0.95, Contract=0.8)
 
-// Example calculation:
-confidence = (1 - 0.1) * 0.9 * 0.95 = 0.77;
+// Example calculations:
+// Fact: confidence = (1 - 0.1) * 0.9 * 0.95 = 0.77 (Academic source)
+// Norm: confidence = (1 - 0.05) * 1.0 * 0.95 = 0.90 (Statute source)
 ```
 
 ## Design Decisions

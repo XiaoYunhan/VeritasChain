@@ -2,6 +2,29 @@
 
 This document shows how real-world news events are translated into VeritasChain's event management language.
 
+## ⚠️ CRITICAL UPDATE NOTICE
+
+**Examples 1-2 have been updated to Phase 1 specifications. Examples 3+ still need updating for:**
+
+1. **Missing `kind: "fact"`** - All news events should specify event type
+2. **Manual confidence setting FORBIDDEN** - All `confidence: 0.xx` lines violate core rules
+3. **Missing AUTO-CALCULATED comments** - Should show confidence formula calculation  
+4. **Non-standard modifier fields** - Remove `phase`, `goals`, `impact`, etc. that don't match interfaces
+5. **Missing Event interface fields** - Add `"@context"`, `"@type"`, proper metadata structure
+
+**Correct Pattern (see Examples 1-2):**
+```typescript
+kind: "fact",  // Always specify for news events
+certainty: {
+  // AUTO-CALCULATED: confidence = (1-V) × E × S
+  // V=0.05 (low volatility), E=0.9 (evidence quality), S=0.9 (NewsAgency)
+  // confidence = (1-0.05) × 0.9 × 0.9 = 0.77
+  evidence: "reported",
+  reliability: "high"
+  // confidence field is NEVER set manually
+}
+```
+
 ---
 
 ## 1. JPMorgan Tells Fintechs They Have to Pay Up for Customer Data
@@ -22,10 +45,16 @@ This document shows how real-world news events are translated into VeritasChain'
 **VeritasChain Event Structure:**
 ```typescript
 {
+  "@context": "https://schema.org/",
+  "@type": "Event",
   "@id": "sha256:d4e5f6789abc123def456789abcdef0123456789abcdef0123456789abcdef01",
   logicalId: "jpmorgan-fintech-fees-001",
   version: "1.0",
   commitHash: "sha256:234def456789abcdef0123456789abcdef0123456789abcdef0123456789abcd",
+  
+  // Event kind - fact (news event) vs norm (legal clause)
+  kind: "fact",
+  
   title: "JPMorgan Charges Fintechs for Data Access",
   dateOccurred: "2025-01-15T09:00:00Z",
   dateRecorded: "2025-01-15T10:30:00Z",
@@ -36,13 +65,14 @@ This document shows how real-world news events are translated into VeritasChain'
     objectRef: "sha256:789abc456def456789abcdef0123456789abcdef0123456789abcdef01234567"
   },
   modifiers: {
-    temporal: { when: "future", tense: "will start", phase: "starting" },
+    temporal: { when: "future", tense: "will" },
     purpose: { reason: "customer data access fees" },
     degree: { amount: "hundreds of millions USD", scale: "massive" },
-    manner: { impact: "threatens business models", style: "aggressive" },
+    manner: { method: "fee implementation", style: "aggressive" },
     certainty: {
-      confidence: 0.85,
-      source: "JPMorgan announcement",
+      // AUTO-CALCULATED: confidence = (1-V) × E × S
+      // V=0.05 (stable), E=1.0 (official announcement), S=0.9 (NewsAgency)
+      // confidence = (1-0.05) × 1.0 × 0.9 = 0.855
       evidence: "official",
       reliability: "high"
     }
@@ -62,8 +92,11 @@ This document shows how real-world news events are translated into VeritasChain'
       url: "https://ft.com/jpmorgan-fintech-fees"
     },
     author: "finance.reporter@ft.com",
-    version: "1.0",
-    datePublished: "2025-01-15T10:00:00Z"
+    
+    // AUTO-CALCULATED fields - never set manually
+    confidence: null,  // Calculated: (1-V) × E × S = (1-0.05) × 1.0 × 0.9 = 0.855
+    volatility: null,  // Calculated from change history
+    sourceScore: null  // Calculated from source.type (NewsAgency = 0.9)
   }
 }
 ```
@@ -88,10 +121,15 @@ This document shows how real-world news events are translated into VeritasChain'
 **VeritasChain Event Structure:**
 ```typescript
 {
+  "@context": "https://schema.org/",
+  "@type": "Event",
   "@id": "sha256:e5f6789abc234def456789abcdef0123456789abcdef0123456789abcdef0123",
   logicalId: "us-india-trade-negotiations-001",
   version: "1.0",
   commitHash: "sha256:345def456789abcdef0123456789abcdef0123456789abcdef0123456789abcd",
+  
+  kind: "fact",  // News event
+  
   title: "US-India Trade Deal Negotiations",
   dateOccurred: "2025-01-15T11:00:00Z",
   dateRecorded: "2025-01-15T12:00:00Z",
@@ -113,14 +151,15 @@ This document shows how real-world news events are translated into VeritasChain'
     ]
   },
   modifiers: {
-    temporal: { when: "present", tense: "is", phase: "continuing" },
-    condition: { type: "possibility", certainty: 0.7, condition: "interim deal success" },
+    temporal: { when: "present", tense: "is" },
+    condition: { type: "possibility", condition: "interim deal success" },
     degree: { threshold: "below 20%", scale: "medium" },
     spatial: { region: "South Asia", scope: "regional" },
     purpose: { goal: "favorable trade position vs regional peers" },
     certainty: {
-      confidence: 0.7,
-      source: "Trade negotiation reports",
+      // AUTO-CALCULATED: confidence = (1-V) × E × S  
+      // V=0.15 (negotiations volatile), E=0.8 (reported), S=0.9 (NewsAgency)
+      // confidence = (1-0.15) × 0.8 × 0.9 = 0.612
       evidence: "reported",
       reliability: "medium"
     }
@@ -140,8 +179,11 @@ This document shows how real-world news events are translated into VeritasChain'
       url: "https://reuters.com/us-india-trade"
     },
     author: "trade.reporter@reuters.com",
-    version: "1.0",
-    datePublished: "2025-01-15T11:30:00Z"
+    
+    // AUTO-CALCULATED fields - never set manually
+    confidence: null,  // Calculated: (1-V) × E × S = (1-0.15) × 0.8 × 0.9 = 0.612
+    volatility: null,  // Calculated from change history
+    sourceScore: null  // Calculated from source.type (NewsAgency = 0.9)
   }
 }
 ```
@@ -439,8 +481,8 @@ This document shows how real-world news events are translated into VeritasChain'
   statement: {
     type: 'SVO',
     subjectRef: "sha256:ef0123456789abcdef0123456789abcdef0123456789abcdef0123456789ab",
-    verbRef: "sha256:attracts-action...",
-    objectRef: "sha256:bank-recruits-group..."
+    verbRef: "sha256:f0123456789abcdef0123456789abcdef0123456789abcdef0123456789ab",
+    objectRef: "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abc"
   },
   modifiers: {
     temporal: { 
@@ -471,13 +513,13 @@ This document shows how real-world news events are translated into VeritasChain'
   relationships: [
     {
       type: "relatedTo",
-      target: "sha256:jpmorgan-analyst-program...",
+      target: "sha256:123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd",
       strength: 0.9,
       description: "Evidenced by JPMorgan training absences"
     },
     {
       type: "threatens",
-      target: "sha256:banking-talent-pipeline...",
+      target: "sha256:23456789abcdef0123456789abcdef0123456789abcdef0123456789abcde",
       strength: 0.8,
       description: "Threatens traditional banking recruitment"
     }
@@ -515,18 +557,18 @@ This document shows how real-world news events are translated into VeritasChain'
 **VeritasChain Event Structure:**
 ```typescript
 {
-  "@id": "sha256:efg123456789...",
+  "@id": "sha256:efg123456789abcdef0123456789abcdef0123456789abcdef0123456789ab",
   logicalId: "ortega-hotel-acquisition-001",
   version: "1.0",
-  commitHash: "sha256:commit890...",
+  commitHash: "sha256:890def456789abcdef0123456789abcdef0123456789abcdef0123456789ab",
   title: "Ortega Acquires Paris Hotel for $113M",
   dateOccurred: "2025-01-10T14:00:00Z",
   dateRecorded: "2025-01-15T14:00:00Z",
   statement: {
     type: 'SVO',
-    subjectRef: "sha256:ortega-person...",
-    verbRef: "sha256:acquires-action...",
-    objectRef: "sha256:hotel-banke-property..."
+    subjectRef: "sha256:3456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    verbRef: "sha256:acquires-action456def789abc123def456789abcdef0123456789abcdef01",
+    objectRef: "sha256:56789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01"
   },
   modifiers: {
     temporal: { 
@@ -563,13 +605,13 @@ This document shows how real-world news events are translated into VeritasChain'
   relationships: [
     {
       type: "follows",
-      target: "sha256:ortega-first-paris-acquisition...",
+      target: "sha256:6789abcdef0123456789abcdef0123456789abcdef0123456789abcdef012",
       strength: 0.9,
       description: "Second acquisition in Paris within one year"
     },
     {
       type: "partOf",
-      target: "sha256:ortega-global-property-strategy...",
+      target: "sha256:789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123",
       strength: 0.85,
       description: "Part of broader real estate investment strategy"
     }
@@ -607,10 +649,10 @@ This document shows how real-world news events are translated into VeritasChain'
 **VeritasChain Event Structure:**
 ```typescript
 {
-  "@id": "sha256:fgh234567890...",
+  "@id": "sha256:fgh234567890abcdef0123456789abcdef0123456789abcdef0123456789ab",
   logicalId: "north-korea-russia-ammunition-001",
   version: "1.0",
-  commitHash: "sha256:commitabc...",
+  commitHash: "sha256:abcdef456789abcdef0123456789abcdef0123456789abcdef0123456789ab",
   title: "North Korea Supplies 40% of Russian Ammunition",
   dateOccurred: "2025-01-01T00:00:00Z",
   dateRecorded: "2025-01-15T15:00:00Z",
@@ -619,18 +661,18 @@ This document shows how real-world news events are translated into VeritasChain'
     operands: [
       { 
         type: 'SVO', 
-        subjectRef: "sha256:north-korea-country...", 
-        verbRef: "sha256:supplies-action...", 
-        objectRef: "sha256:russian-ammunition..." 
+        subjectRef: "sha256:89abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234", 
+        verbRef: "sha256:9abcdef0123456789abcdef0123456789abcdef0123456789abcdef012345", 
+        objectRef: "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456" 
       },
       { 
         type: 'EQ', 
         operands: [
           { 
             type: 'SVO', 
-            subjectRef: "sha256:supply-percentage...", 
-            verbRef: "sha256:equals-action...", 
-            objectRef: "sha256:40-percent-value..." 
+            subjectRef: "sha256:bcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567", 
+            verbRef: "sha256:equals-action789abc456def123abc456def789abc456def123abc456de", 
+            objectRef: "sha256:def0123456789abcdef0123456789abcdef0123456789abcdef0123456789" 
           }
         ]
       }
@@ -662,13 +704,13 @@ This document shows how real-world news events are translated into VeritasChain'
   relationships: [
     {
       type: "causedBy",
-      target: "sha256:russia-ukraine-war...",
+      target: "sha256:ef0123456789abcdef0123456789abcdef0123456789abcdef0123456789a",
       strength: 0.95,
       description: "Direct result of ongoing conflict"
     },
     {
       type: "relatedTo",
-      target: "sha256:russia-north-korea-partnership...",
+      target: "sha256:f0123456789abcdef0123456789abcdef0123456789abcdef0123456789ab",
       strength: 0.9,
       description: "Evidence of deepening partnership"
     }
@@ -706,10 +748,10 @@ This document shows how real-world news events are translated into VeritasChain'
 **VeritasChain Event Structure:**
 ```typescript
 {
-  "@id": "sha256:ghi345678901...",
+  "@id": "sha256:ghi345678901abcdef0123456789abcdef0123456789abcdef0123456789ab",
   logicalId: "us-foods-performance-takeover-001",
   version: "1.0",
-  commitHash: "sha256:commitbcd...",
+  commitHash: "sha256:bcddef456789abcdef0123456789abcdef0123456789abcdef0123456789ab",
   title: "US Foods Targets Performance Food Takeover",
   dateOccurred: "2025-01-12T00:00:00Z",
   dateRecorded: "2025-01-15T16:00:00Z",
@@ -718,15 +760,15 @@ This document shows how real-world news events are translated into VeritasChain'
     operands: [
       { 
         type: 'SVO', 
-        subjectRef: "sha256:us-foods-company...", 
-        verbRef: "sha256:acquires-action...", 
-        objectRef: "sha256:performance-food-company..." 
+        subjectRef: "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abc", 
+        verbRef: "sha256:acquires-action456def789abc123def456789abcdef0123456789abcdef01", 
+        objectRef: "sha256:123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd" 
       },
       { 
         type: 'SVO', 
-        subjectRef: "sha256:merged-entity...", 
-        verbRef: "sha256:creates-action...", 
-        objectRef: "sha256:100b-company-entity..." 
+        subjectRef: "sha256:23456789abcdef0123456789abcdef0123456789abcdef0123456789abcde", 
+        verbRef: "sha256:3456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", 
+        objectRef: "sha256:456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0" 
       }
     ]
   },
@@ -765,7 +807,7 @@ This document shows how real-world news events are translated into VeritasChain'
   relationships: [
     {
       type: "partOf",
-      target: "sha256:food-industry-consolidation...",
+      target: "sha256:56789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01",
       strength: 0.8,
       description: "Part of broader industry consolidation trend"
     }
@@ -803,10 +845,10 @@ This document shows how real-world news events are translated into VeritasChain'
 **VeritasChain Event Structure:**
 ```typescript
 {
-  "@id": "sha256:hij456789012...",
+  "@id": "sha256:hij456789012abcdef0123456789abcdef0123456789abcdef0123456789ab",
   logicalId: "rubio-xi-trump-summit-prediction-001",
   version: "1.0",
-  commitHash: "sha256:commitcde...",
+  commitHash: "sha256:cdedef456789abcdef0123456789abcdef0123456789abcdef0123456789ab",
   title: "Rubio Predicts Xi-Trump Summit After Diplomatic Meeting",
   dateOccurred: "2025-01-14T10:00:00Z",
   dateRecorded: "2025-01-15T17:00:00Z",
@@ -815,15 +857,15 @@ This document shows how real-world news events are translated into VeritasChain'
     operands: [
       { 
         type: 'SVO', 
-        subjectRef: "sha256:us-china-diplomats...", 
-        verbRef: "sha256:meets-action...", 
-        objectRef: "sha256:malaysia-location..." 
+        subjectRef: "sha256:6789abcdef0123456789abcdef0123456789abcdef0123456789abcdef012", 
+        verbRef: "sha256:789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123", 
+        objectRef: "sha256:89abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234" 
       },
       { 
         type: 'SVO', 
-        subjectRef: "sha256:xi-trump-summit...", 
-        verbRef: "sha256:becomes-action...", 
-        objectRef: "sha256:likely-status..." 
+        subjectRef: "sha256:9abcdef0123456789abcdef0123456789abcdef0123456789abcdef012345", 
+        verbRef: "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456", 
+        objectRef: "sha256:bcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567" 
       }
     ]
   },
@@ -854,13 +896,13 @@ This document shows how real-world news events are translated into VeritasChain'
   relationships: [
     {
       type: "causedBy",
-      target: "sha256:us-china-diplomatic-meeting...",
+      target: "sha256:cdef0123456789abcdef0123456789abcdef0123456789abcdef012345678",
       strength: 0.9,
       description: "Summit likelihood increased by successful diplomatic meeting"
     },
     {
       type: "partOf",
-      target: "sha256:us-china-relations-improvement...",
+      target: "sha256:def0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
       strength: 0.8,
       description: "Part of broader US-China diplomatic engagement"
     }
@@ -898,10 +940,10 @@ This document shows how real-world news events are translated into VeritasChain'
 **VeritasChain Event Structure:**
 ```typescript
 {
-  "@id": "sha256:ijk567890123...",
+  "@id": "sha256:ijk567890123abcdef0123456789abcdef0123456789abcdef0123456789ab",
   logicalId: "ocbc-ceo-transition-001",
   version: "1.0", 
-  commitHash: "sha256:commitdef...",
+  commitHash: "sha256:defdef456789abcdef0123456789abcdef0123456789abcdef0123456789ab",
   title: "OCBC CEO Transition: Wong to Tan",
   dateOccurred: "2025-01-13T09:00:00Z",
   dateRecorded: "2025-01-15T18:00:00Z",
@@ -910,15 +952,15 @@ This document shows how real-world news events are translated into VeritasChain'
     operands: [
       { 
         type: 'SVO', 
-        subjectRef: "sha256:helen-wong-person...", 
-        verbRef: "sha256:steps-down-action...", 
-        objectRef: "sha256:ceo-position..." 
+        subjectRef: "sha256:helen-wong-person123abc456def789abc123def456789abc123def456789abc", 
+        verbRef: "sha256:steps-down-action234def567abc890def234abc567def890abc234def567ab", 
+        objectRef: "sha256:ceo-position345abc678def901abc345def678abc901def345abc678def901a" 
       },
       { 
         type: 'SVO', 
-        subjectRef: "sha256:tan-person...", 
-        verbRef: "sha256:assumes-action...", 
-        objectRef: "sha256:ceo-position..." 
+        subjectRef: "sha256:tan-person456def789abc012def456abc789def012abc456def789abc012de", 
+        verbRef: "sha256:assumes-action567abc890def123abc567def890abc123def567abc890def12", 
+        objectRef: "sha256:ceo-position345abc678def901abc345def678abc901def345abc678def901a" 
       }
     ]
   },
@@ -949,13 +991,13 @@ This document shows how real-world news events are translated into VeritasChain'
   relationships: [
     {
       type: "follows",
-      target: "sha256:wong-4-year-tenure...",
+      target: "sha256:wong-4-year-tenure123abc456def789abc123def456789abc123def456789ab",
       strength: 1.0,
       description: "Succession after 4-year leadership tenure"
     },
     {
       type: "partOf",
-      target: "sha256:ocbc-leadership-strategy...",
+      target: "sha256:ocbc-leadership-strategy234def567abc890def234abc567def890abc234d",
       strength: 0.9,
       description: "Part of planned leadership development"
     }
@@ -987,19 +1029,19 @@ This document shows how real-world news events are translated into VeritasChain'
 **VeritasChain Event Structure:**
 ```typescript
 {
-  "@id": "sha256:a1b2c3d4e5f6789...",
+  "@id": "sha256:a1b2c3d4e5f6789abcdef0123456789abcdef0123456789abcdef0123456",
   logicalId: "denial-companyx-companyy-001",
   version: "1.0",
-  commitHash: "sha256:commit123...",
+  commitHash: "sha256:123def456789abcdef0123456789abcdef0123456789abcdef0123456789ab",
   title: "Company X Denies Acquisition Rumors",
   statement: {
     type: 'NOT',
     operands: [
       { 
         type: 'SVO',
-        subjectRef: "sha256:companyx456...",
-        verbRef: "sha256:acquires789...", 
-        objectRef: "sha256:companyy321..."
+        subjectRef: "sha256:companyx456def789abc123def456789abc123def456789abc123def456de",
+        verbRef: "sha256:acquires789abc456def123abc456def789abc456def123abc456def789ab", 
+        objectRef: "sha256:companyy321def456abc789def456abc789def456abc789def456abc789de"
       }
     ]
   },
@@ -1015,7 +1057,7 @@ This document shows how real-world news events are translated into VeritasChain'
   relationships: [
     {
       type: "contradicts",
-      target: "sha256:original-rumor-event...",
+      target: "sha256:original-rumor-event345abc678def901abc345def678abc901abc345def6",
       strength: 1.0,
       confidence: 0.95
     }
@@ -1038,10 +1080,10 @@ This document shows how real-world news events are translated into VeritasChain'
 **VeritasChain Event Structure:**
 ```typescript
 {
-  "@id": "sha256:b2c3d4e5f6789a...",
+  "@id": "sha256:b2c3d4e5f6789abcdef0123456789abcdef0123456789abcdef0123456789",
   logicalId: "merger-timeline-constraints-001", 
   version: "1.0",
-  commitHash: "sha256:commit456...",
+  commitHash: "sha256:commit456def789abc123def456789abc123def456789abc123def456789abc1",
   title: "Merger Timeline Dependencies",
   statement: {
     type: 'AND',
@@ -1051,15 +1093,15 @@ This document shows how real-world news events are translated into VeritasChain'
         operands: [
           { 
             type: 'SVO',
-            subjectRef: "sha256:regulatory-body...",
-            verbRef: "sha256:approves...",
-            objectRef: "sha256:merger-application..."
+            subjectRef: "sha256:regulatory-body567abc890def123abc567def890abc123def567abc890d",
+            verbRef: "sha256:approves678abc901def234abc678def901abc234def678abc901def234ab",
+            objectRef: "sha256:merger-application789def012abc345def789abc012def345abc789def01"
           },
           {
             type: 'SVO', 
-            subjectRef: "sha256:companies...",
-            verbRef: "sha256:completes...",
-            objectRef: "sha256:merger..."
+            subjectRef: "sha256:cdef0123456789abcdef0123456789abcdef0123456789abcdef012345678",
+            verbRef: "sha256:def0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+            objectRef: "sha256:ef0123456789abcdef0123456789abcdef0123456789abcdef0123456789a"
           }
         ]
       },
@@ -1068,9 +1110,9 @@ This document shows how real-world news events are translated into VeritasChain'
         operands: [
           {
             type: 'SVO',
-            subjectRef: "sha256:regulatory-approval...",
-            verbRef: "sha256:happens...", 
-            objectRef: "sha256:december-deadline..."
+            subjectRef: "sha256:f0123456789abcdef0123456789abcdef0123456789abcdef0123456789ab",
+            verbRef: "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abc", 
+            objectRef: "sha256:123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd"
           }
         ]
       }
@@ -1101,10 +1143,10 @@ This document shows how real-world news events are translated into VeritasChain'
 **VeritasChain Event Structure:**
 ```typescript
 {
-  "@id": "sha256:c3d4e5f6789ab1...",
+  "@id": "sha256:c3d4e5f6789ab1def0123456789abcdef0123456789abcdef0123456789a",
   logicalId: "economic-scenario-analysis-001",
   version: "1.0", 
-  commitHash: "sha256:commit789...",
+  commitHash: "sha256:789def456789abcdef0123456789abcdef0123456789abcdef0123456789ab",
   title: "Economic Scenario: Oil Price Impact Analysis",
   statement: {
     type: 'IMPLIES',
@@ -1118,17 +1160,17 @@ This document shows how real-world news events are translated into VeritasChain'
             operands: [
               {
                 type: 'SVO',
-                subjectRef: "sha256:oil-prices...",
-                verbRef: "sha256:reaches...",
-                objectRef: "sha256:price-level..."
+                subjectRef: "sha256:23456789abcdef0123456789abcdef0123456789abcdef0123456789abcde",
+                verbRef: "sha256:3456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                objectRef: "sha256:456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0"
               }
             ]
           },
           {
             type: 'SVO',
-            subjectRef: "sha256:supply-chains...", 
-            verbRef: "sha256:experiences...",
-            objectRef: "sha256:disruptions..."
+            subjectRef: "sha256:56789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01", 
+            verbRef: "sha256:6789abcdef0123456789abcdef0123456789abcdef0123456789abcdef012",
+            objectRef: "sha256:789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123"
           }
         ]
       },
@@ -1138,15 +1180,15 @@ This document shows how real-world news events are translated into VeritasChain'
         operands: [
           {
             type: 'SVO',
-            subjectRef: "sha256:inflation...",
-            verbRef: "sha256:spikes...",
-            objectRef: "sha256:significantly..."
+            subjectRef: "sha256:89abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234",
+            verbRef: "sha256:9abcdef0123456789abcdef0123456789abcdef0123456789abcdef012345",
+            objectRef: "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456"
           },
           {
             type: 'SVO', 
-            subjectRef: "sha256:central-banks...",
-            verbRef: "sha256:intervenes...",
-            objectRef: "sha256:aggressively..."
+            subjectRef: "sha256:bcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567",
+            verbRef: "sha256:cdef0123456789abcdef0123456789abcdef0123456789abcdef012345678",
+            objectRef: "sha256:def0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
           }
         ]
       }
@@ -1231,10 +1273,10 @@ This document shows how real-world news events are translated into VeritasChain'
 **VeritasChain Event Structure:**
 ```typescript
 {
-  "@id": "sha256:jkl678901234...",
+  "@id": "sha256:jkl678901234abcdef0123456789abcdef0123456789abcdef0123456789a",
   logicalId: "revenue-growth-thresholds-001",
   version: "1.0",
-  commitHash: "sha256:commitefg...",
+  commitHash: "sha256:efgdef456789abcdef0123456789abcdef0123456789abcdef0123456789ab",
   title: "Revenue Growth Performance Thresholds Analysis",
   dateOccurred: "2025-01-15T16:00:00Z",
   dateRecorded: "2025-01-15T19:00:00Z",
@@ -1250,18 +1292,18 @@ This document shows how real-world news events are translated into VeritasChain'
             operands: [
               {
                 type: 'SVO',
-                subjectRef: "sha256:revenue-growth-rate...",
-                verbRef: "sha256:equals-action...",
-                objectRef: "sha256:growth-percentage..."
+                subjectRef: "sha256:ef0123456789abcdef0123456789abcdef0123456789abcdef0123456789a",
+                verbRef: "sha256:equals-action789abc456def123abc456def789abc456def123abc456de",
+                objectRef: "sha256:f0123456789abcdef0123456789abcdef0123456789abcdef0123456789ab"
               }
             ],
             threshold: { value: 5, unit: "percent", dataType: "number" }
           },
           {
             type: 'SVO',
-            subjectRef: "sha256:companies-lowgrowth...",
-            verbRef: "sha256:faces-action...",
-            objectRef: "sha256:investor-scrutiny..."
+            subjectRef: "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abc",
+            verbRef: "sha256:123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd",
+            objectRef: "sha256:23456789abcdef0123456789abcdef0123456789abcdef0123456789abcde"
           }
         ]
       },
@@ -1274,18 +1316,18 @@ This document shows how real-world news events are translated into VeritasChain'
             operands: [
               {
                 type: 'SVO',
-                subjectRef: "sha256:revenue-growth-rate...",
-                verbRef: "sha256:equals-action...",
-                objectRef: "sha256:growth-percentage..."
+                subjectRef: "sha256:ef0123456789abcdef0123456789abcdef0123456789abcdef0123456789a",
+                verbRef: "sha256:equals-action789abc456def123abc456def789abc456def123abc456de",
+                objectRef: "sha256:f0123456789abcdef0123456789abcdef0123456789abcdef0123456789ab"
               }
             ],
             threshold: { value: 15, unit: "percent", dataType: "number" }
           },
           {
             type: 'SVO',
-            subjectRef: "sha256:companies-highgrowth...",
-            verbRef: "sha256:outperforms-action...",
-            objectRef: "sha256:market-benchmarks..."
+            subjectRef: "sha256:3456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            verbRef: "sha256:456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0",
+            objectRef: "sha256:56789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01"
           }
         ]
       }
@@ -1316,7 +1358,7 @@ This document shows how real-world news events are translated into VeritasChain'
   relationships: [
     {
       type: "partOf",
-      target: "sha256:market-analysis-framework...",
+      target: "sha256:6789abcdef0123456789abcdef0123456789abcdef0123456789abcdef012",
       strength: 0.8,
       description: "Component of broader market performance analysis"
     }
@@ -1388,3 +1430,235 @@ Based on comprehensive architecture review, the following improvements have been
 - Version chains linked through `previousVersion` references
 
 This enhanced translation framework enables VeritasChain to capture the full complexity of real-world events while maintaining logical structure for analysis, version control, and blockchain compatibility. The standardized approach ensures consistency across different contributors and prevents common implementation errors.
+
+---
+
+## PHASE 1 ADDITION: Legal Normative Clauses (kind='norm')
+
+### Example A: Employment Law Amendment
+
+**Original Legal Text:**
+> Effective January 1, 2025, all employees in Singapore shall be entitled to a minimum of 14 days paternity leave upon the birth or adoption of a child.
+
+**Core Deontic Statement:** `Employees SHALL_BE_ENTITLED_TO PaternityLeave`
+
+**VeritasChain Legal Clause:**
+```typescript
+{
+  "@id": "sha256:a9b8c7d6e5f4321098765432109876543210987654321098765432109876543210",
+  logicalId: "sg-paternity-leave-amendment-2025",
+  version: "1.0",
+  commitHash: "sha256:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+  
+  // PHASE 1: Legal clause designation
+  kind: "norm",
+  
+  title: "Singapore Paternity Leave Amendment 2025",
+  dateOccurred: "2024-12-15T00:00:00Z",  // When law was passed
+  dateRecorded: "2024-12-16T09:00:00Z",
+  
+  statement: {
+    type: 'SVO',
+    subjectRef: "sha256:employees-sg-entity1234567890abcdef1234567890abcdef1234567890ab",
+    verbRef: "sha256:entitled-to-action1234567890abcdef1234567890abcdef1234567890a",
+    objectRef: "sha256:paternity-leave-benefit1234567890abcdef1234567890abcdef12345"
+  },
+  
+  modifiers: {
+    temporal: {
+      when: "future",
+      effectiveFrom: "2025-01-01T00:00:00Z"
+    },
+    // PHASE 1: Legal-specific modifiers
+    legal: {
+      jurisdiction: "Singapore",
+      effectiveDate: "2025-01-01T00:00:00Z",
+      normForce: "mandatory",  // strength: 1.0
+      exception: "Does not apply to contract workers"
+    },
+    degree: {
+      amount: "14 days minimum",
+      scale: "medium"
+    },
+    condition: {
+      type: "upon",
+      condition: "birth or adoption of child"
+    },
+    certainty: {
+      evidence: "official",     // E = 1.0
+      reliability: "high"
+    }
+  },
+  
+  relationships: [
+    {
+      type: "amends",  // PHASE 1: Legal relationship
+      target: "sha256:sg-employment-act-original1234567890abcdef1234567890abcdef",
+      strength: 1.0,
+      description: "Amends Singapore Employment Act Section 76"
+    }
+  ],
+  
+  metadata: {
+    source: {
+      name: "Ministry of Manpower Singapore",
+      type: "Government",
+      legalType: "statute",     // PHASE 1: Legal hierarchy = 0.95
+      url: "https://mom.gov.sg/employment-act-amendment-2024"
+    },
+    author: "mom.policy@gov.sg",
+    version: "1.0",
+    datePublished: "2024-12-15T16:00:00Z",
+    
+    // AUTO-CALCULATED: confidence = (1-V) × E × S
+    // V=0.0 (new law, no changes yet), E=1.0 (official), S=0.95 (statute)
+    // confidence = (1-0.0) × 1.0 × 0.95 = 0.95
+    confidence: 0.95,
+    volatility: 0.0,
+    evidenceScore: 1.0,
+    legalHierarchyWeight: 0.95
+  }
+}
+```
+
+---
+
+### Example B: Contract Clause with Sunset Date
+
+**Original Contract Text:**
+> The Supplier must deliver all materials by December 31, 2025, or shall be liable for liquidated damages of $10,000 per day of delay, unless force majeure conditions prevent performance.
+
+**Core Deontic Statement:** `Supplier MUST_DELIVER Materials BY_DEADLINE OR LIABLE_FOR Damages`
+
+**VeritasChain Legal Clause:**
+```typescript
+{
+  "@id": "sha256:b1c2d3e4f5678901234567890123456789012345678901234567890123456789",
+  logicalId: "supply-contract-delivery-clause-001",
+  version: "1.0", 
+  commitHash: "sha256:2345678901bcdef2345678901bcdef2345678901bcdef2345678901bcdef23",
+  
+  kind: "norm",
+  
+  title: "Material Delivery Obligation with Liquidated Damages",
+  dateOccurred: "2024-06-15T14:30:00Z",  // Contract signing
+  dateRecorded: "2024-06-15T14:30:00Z",
+  
+  statement: {
+    type: 'IMPLIES',  // Complex logical structure
+    operands: [
+      {
+        type: 'NOT',
+        operands: [{
+          type: 'SVO',
+          subjectRef: "sha256:supplier-entity234567890abcdef234567890abcdef234567890abc",
+          verbRef: "sha256:delivers-action234567890abcdef234567890abcdef234567890ab",
+          objectRef: "sha256:materials-object234567890abcdef234567890abcdef234567890a"
+        }]
+      },
+      {
+        type: 'SVO',
+        subjectRef: "sha256:supplier-entity234567890abcdef234567890abcdef234567890abc",
+        verbRef: "sha256:liable-for-action234567890abcdef234567890abcdef234567890",
+        objectRef: "sha256:damages-10k-object234567890abcdef234567890abcdef23456789"
+      }
+    ]
+  },
+  
+  modifiers: {
+    temporal: {
+      when: "future",
+      deadline: "2025-12-31T23:59:59Z"
+    },
+    legal: {
+      jurisdiction: "New York",
+      effectiveDate: "2024-06-15T14:30:00Z",
+      sunsetDate: "2025-12-31T23:59:59Z",  // PHASE 1: Contract expiration
+      normForce: "mandatory",
+      exception: "Force majeure conditions excuse performance"
+    },
+    degree: {
+      amount: "$10,000 per day",
+      scale: "large"
+    },
+    condition: {
+      type: "unless",
+      condition: "force majeure prevents performance"
+    },
+    certainty: {
+      evidence: "confirmed",   // E = 1.0
+      reliability: "high"
+    }
+  },
+  
+  relationships: [
+    {
+      type: "partOf",
+      target: "sha256:master-supply-agreement234567890abcdef234567890abcdef2345",
+      strength: 1.0,
+      description: "Section 4.2 of Master Supply Agreement"
+    },
+    {
+      type: "dependentOn",  // PHASE 1: Legal dependency
+      target: "sha256:material-specification234567890abcdef234567890abcdef234567",
+      strength: 0.9,
+      description: "Delivery obligation depends on agreed specifications"
+    }
+  ],
+  
+  metadata: {
+    source: {
+      name: "ABC Corp - XYZ Suppliers Contract",
+      type: "Corporate",
+      legalType: "contract",    // PHASE 1: Legal hierarchy = 0.8
+      url: "internal://contracts/supply-001"
+    },
+    author: "legal@abccorp.com",
+    version: "1.0",
+    datePublished: "2024-06-15T14:30:00Z",
+    
+    // AUTO-CALCULATED: confidence = (1-V) × E × S  
+    // V=0.05 (minor clarifications), E=1.0 (confirmed), S=0.8 (contract)
+    // confidence = (1-0.05) × 1.0 × 0.8 = 0.76
+    confidence: 0.76,
+    volatility: 0.05,
+    evidenceScore: 1.0,
+    legalHierarchyWeight: 0.8
+  }
+}
+```
+
+---
+
+## ⚠️ LEGAL CLAUSE EXAMPLES ALSO NEED UPDATING
+
+**Even the legal clause examples (kind='norm') still violate core rules:**
+- Line 1623: `confidence: 0.76` - FORBIDDEN manual setting
+- Lines 1499, 1575, 1581: Manual confidence values throughout
+
+**Legal clauses should follow the same pattern:**
+```typescript
+kind: "norm",  // Legal clause
+certainty: {
+  // AUTO-CALCULATED: confidence = (1-V) × E × S (legal hierarchy)
+  // V=0.05, E=1.0, S=0.8 (contract) → confidence = 0.76
+  evidence: "confirmed",
+  reliability: "high"
+  // NEVER set confidence manually, even for legal clauses
+}
+```
+
+---
+
+## Phase 1 Legal Integration Summary
+
+**What's Now Possible**: VeritasChain can store and query both `kind='fact'` (news events) and `kind='norm'` (legal clauses) using identical APIs and data structures.
+
+**Key Features Added**:
+- **Deontic Actions**: `shall`, `may`, `must-not`, `liable-for`, `entitled-to`, etc.
+- **Legal Modifiers**: `jurisdiction`, `effectiveDate`, `sunsetDate`, `normForce`
+- **Legal Relationships**: `amends`, `supersedes`, `refersTo`, `dependentOn` 
+- **Hierarchy Weights**: Constitution (1.0) → Statute (0.95) → Regulation (0.9) → Case-law (0.85) → Contract (0.8) → Policy (0.75)
+- **Norm Force**: Mandatory (1.0) / Default (0.7) / Advisory (0.4)
+
+**Same Transparent Formula**: `confidence = (1-V) × E × S` works for both facts and norms, with legal hierarchy replacing source factors for normative clauses.

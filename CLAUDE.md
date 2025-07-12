@@ -2,7 +2,7 @@
 
 ## CRITICAL: Read This First
 
-This project implements a Git-like version control system for news events with **future blockchain compatibility**. The architecture is intentionally minimal but must support future decentralization. **DO NOT** add unnecessary complexity or dependencies.
+This project implements a Git-like version control system for both **factual events** (news, scientific, economic) and **normative clauses** (legal, contractual) with **future blockchain compatibility**. The architecture is intentionally minimal but must support future decentralization. **DO NOT** add unnecessary complexity or dependencies.
 
 ## Core Constraints
 
@@ -157,11 +157,15 @@ interface ActionObject {
   type: string;
   version: string;      // Semantic version
   commitHash: string;
+  
+  // PHASE 1: Deontic actions for legal clauses (kind='norm')
+  deonticType?: 'shall' | 'may' | 'must-not' | 'liable-for' | 'entitled-to' | 'should' | 'permitted' | 'prohibited';
+  
   properties?: Record<string, any>;
   previousVersion?: string;  // @id of previous version
 }
 
-// Unified statement structure for logical reasoning
+// Unified statement structure for logical reasoning (Phase 1: fact + norm support)
 type Statement = SVO | LogicalClause;
 
 interface SVO {
@@ -210,18 +214,22 @@ interface Event {
   dateRecorded: string;  // When we recorded it (ISO 8601)
   dateModified?: string;
   
-  // Unified logical statement (可以是简单SVO或复杂逻辑结构)
+  // PHASE 1: Event kind - fact (default) or norm (legal clause)
+  kind?: 'fact' | 'norm';  // Default: 'fact' for existing events
+  
+  // Unified logical statement (can be simple SVO or complex logical structure)
   statement: Statement;
   
-  // Context and modifiers (状语和定语) - STANDARDIZED
+  // Context and modifiers - STANDARDIZED
   modifiers: {
-    temporal?: TemporalModifier;    // 时间状语 (when, duration, frequency)
-    spatial?: SpatialModifier;      // 地点状语 (where, location)
-    manner?: MannerModifier;        // 方式状语 (how, method)
-    degree?: DegreeModifier;        // 程度状语 (extent, intensity)
-    purpose?: PurposeModifier;      // 目的状语 (why, intention)
-    condition?: ConditionalModifier; // 条件状语 (if, unless)
-    certainty?: CertaintyModifier;   // 确定性定语 (probable, certain)
+    temporal?: TemporalModifier;    // When, duration, frequency
+    spatial?: SpatialModifier;      // Where, location, scope
+    manner?: MannerModifier;        // How, method, style
+    degree?: DegreeModifier;        // Extent, intensity, amount
+    purpose?: PurposeModifier;      // Why, intention, goal
+    condition?: ConditionalModifier; // If, unless, conditional
+    certainty?: CertaintyModifier;   // Confidence, evidence, reliability
+    legal?: LegalModifier;          // PHASE 1: Jurisdiction, effectiveDate, normForce
   };
 
 // STANDARDIZED MODIFIER TYPES (Prevent spelling errors)
@@ -287,6 +295,15 @@ interface CertaintyModifier {
   probability?: number;      // 0-1 probability estimate
   evidence?: 'hearsay' | 'reported' | 'confirmed' | 'verified' | 'official';
 }
+
+// PHASE 1: Legal-specific modifiers for normative clauses (kind='norm')
+interface LegalModifier {
+  jurisdiction?: string;       // "US", "EU", "Singapore", "California", etc.
+  effectiveDate?: string;      // ISO 8601 date when norm becomes effective
+  sunsetDate?: string;         // ISO 8601 date when norm expires (optional)
+  exception?: string;          // Conditions under which norm doesn't apply
+  normForce?: 'mandatory' | 'default' | 'advisory';  // Strength: 1.0 / 0.7 / 0.4
+}
   
   // UNIFIED RELATIONSHIP SYSTEM (No more field confusion)
   relationships?: EventRelationship[];
@@ -313,7 +330,13 @@ interface EventRelationship {
     | 'partOf'          // This event is part of target
     | 'contains'        // This event contains target
     | 'precedes'        // This event happens before target
-    | 'follows';        // This event happens after target
+    | 'follows'         // This event happens after target
+    
+    // PHASE 1: Legal relationships for normative clauses
+    | 'amends'          // This norm amends target norm
+    | 'supersedes'      // This norm replaces target norm
+    | 'refersTo'        // This norm references target norm/fact
+    | 'dependentOn';    // This norm depends on target norm/fact
     
   target: string;       // @id of target event
   strength?: number;    // 0-1 relationship strength (defaults to source event confidence)
@@ -372,13 +395,17 @@ interface EventMetadata {
   confidence?: number;     // 0-1, = (1-V) × E × S
   volatility?: number;     // 0-1, from change history
   evidenceScore?: number;  // 0-1, from certainty.evidence
-  sourceScore?: number;    // 0-1, from source.type
+  sourceScore?: number;    // 0-1, from source.type (for kind='fact')
+  legalHierarchyWeight?: number; // 0-1, for kind='norm' (replaces sourceScore)
 }
 
 interface Source {
   name: string;
   type: 'NewsAgency' | 'Government' | 'Corporate' | 'Academic' | 'Social';
   url?: string;
+  
+  // PHASE 1: Legal source hierarchy for kind='norm'
+  legalType?: 'constitution' | 'statute' | 'regulation' | 'case-law' | 'contract' | 'policy';
 }
 ```
 
@@ -572,13 +599,23 @@ const EVIDENCE_FACTORS = {
   'official': 1.0
 } as const;
 
-// Source factor mapping  
+// Source factor mapping (for kind='fact')
 const SOURCE_FACTORS = {
   'Social': 0.7,
   'Corporate': 0.9,
   'NewsAgency': 1.0,
   'Government': 1.1,
   'Academic': 1.0
+} as const;
+
+// PHASE 1: Legal hierarchy weights (for kind='norm' - replaces SOURCE_FACTORS)
+const LEGAL_HIERARCHY_WEIGHTS = {
+  'constitution': 1.0,
+  'statute': 0.95,
+  'regulation': 0.9,
+  'case-law': 0.85,
+  'contract': 0.8,
+  'policy': 0.75
 } as const;
 
 class ConfidenceCalculator {
@@ -596,15 +633,20 @@ class ConfidenceCalculator {
     return Math.min(stdDev / 10, 1);
   }
   
-  // CORE FORMULA: Transparent, no magic numbers
+  // CORE FORMULA: Transparent, no magic numbers (supports both fact and norm)
   calculateConfidence(
     volatility: number,           // 0-1 from change history
     evidence: keyof typeof EVIDENCE_FACTORS,
-    sourceType: keyof typeof SOURCE_FACTORS
+    sourceType?: keyof typeof SOURCE_FACTORS,     // For kind='fact'
+    legalType?: keyof typeof LEGAL_HIERARCHY_WEIGHTS  // For kind='norm' (PHASE 1)
   ): number {
     const V = volatility;
     const E = EVIDENCE_FACTORS[evidence] ?? 0.7;
-    const S = SOURCE_FACTORS[sourceType] ?? 1.0;
+    
+    // PHASE 1: Use legal hierarchy for norms, source factors for facts
+    const S = legalType 
+      ? (LEGAL_HIERARCHY_WEIGHTS[legalType] ?? 0.8)
+      : (SOURCE_FACTORS[sourceType as keyof typeof SOURCE_FACTORS] ?? 1.0);
     
     // Pure multiplication - completely transparent
     return Math.max(0, Math.min(1, (1 - V) * E * S));
@@ -613,6 +655,16 @@ class ConfidenceCalculator {
   // Helper for getting evidence score
   getEvidenceScore(evidence?: string): number {
     return EVIDENCE_FACTORS[evidence as keyof typeof EVIDENCE_FACTORS] ?? 0.7;
+  }
+  
+  // PHASE 1: Calculate norm force strength for legal relationships
+  getNormForceStrength(normForce?: 'mandatory' | 'default' | 'advisory'): number {
+    switch (normForce) {
+      case 'mandatory': return 1.0;
+      case 'default': return 0.7;
+      case 'advisory': return 0.4;
+      default: return 0.7; // Default to 'default'
+    }
   }
   
   // Helper for getting source score
@@ -698,11 +750,6 @@ VeritasChain/
 ├── package.json
 └── README.md
 
-# Phase 2 additions (DO NOT implement now):
-# ├── validation/
-# │   ├── types.ts         # Type validator
-# │   ├── constraints.ts   # Learned constraints
-# │   └── learner.ts       # ML-based pattern learning
 ```
 
 ### 7. API Endpoints (Versioned & Consistent)
@@ -799,24 +846,9 @@ async function createEvent(headline, svo, metadata) {
 ## Example Implementation Pattern
 
 ```typescript
-// GOOD - Transparent confidence calculation
-class VeritasConfidence {
-  calculate(volatility: number, evidence: string, sourceType: string): number {
-    const V = volatility;
-    const E = EVIDENCE_FACTORS[evidence] ?? 0.7;
-    const S = SOURCE_FACTORS[sourceType] ?? 1.0;
-    return (1 - V) * E * S;  // Completely transparent!
-  }
-}
-
-// BAD - Over-engineered confidence
-class ComplexConfidence {
-  calculate(event: Event): number {
-    const weight1 = 0.25;  // Where did these numbers come from?
-    const weight2 = 0.20;  // Too subjective!
-    // NO! Too complex, no magic weights
-  }
-}
+// Use the single ConfidenceCalculator class defined above (lines 621-672)
+// All confidence calculation follows the unified (1-V) × E × S formula
+// No duplicate confidence implementations - refer to the complete class above
 ```
 
 ## Blockchain Preparation Rules
@@ -826,6 +858,81 @@ class ComplexConfidence {
 3. **Signatures are optional now**: But structure must support them
 4. **Hash everything**: Content-addressing is key
 5. **No timestamps in hashes**: Use block timestamps later
+
+## CI/Pre-commit Validation
+
+### Hash Format Validation
+Add this to pre-commit hooks to ensure data integrity:
+
+```typescript
+// src/utils/hashLint.ts
+export function assertSha256(id: string, context: string) {
+  if (!/^sha256:[0-9a-f]{64}$/.test(id)) {
+    throw new Error(`[${context}] invalid SHA-256: ${id}`);
+  }
+}
+
+// Pre-commit validation
+function validateDataFiles() {
+  // Check all @id, commitHash, target fields
+  const hashPattern = /^sha256:[0-9a-f]{64}$/;
+  
+  // Validate in SAMPLE.md, test files, etc.
+  const invalidHashes = findHashReferences().filter(hash => !hashPattern.test(hash));
+  
+  if (invalidHashes.length > 0) {
+    throw new Error(`Invalid hash formats found: ${invalidHashes.join(', ')}`);
+  }
+}
+```
+
+### Relationship Type Validation
+```typescript
+const validRelationshipTypes = [
+  'causedBy', 'causes', 'enables', 'prevents', 'threatens',
+  'derivedFrom', 'supports', 'contradicts', 'updates', 'corrects',
+  'relatedTo', 'partOf', 'contains', 'precedes', 'follows',
+  // PHASE 1: Legal relationships
+  'amends', 'supersedes', 'refersTo', 'dependentOn'
+];
+
+function validateRelationshipTypes(relationships: EventRelationship[]) {
+  relationships.forEach(rel => {
+    if (!validRelationshipTypes.includes(rel.type)) {
+      throw new Error(`Invalid relationship type: ${rel.type}`);
+    }
+  });
+}
+
+// PHASE 1: Validate legal modifiers for norm events
+function validateLegalEvent(event: Event) {
+  if (event.kind === 'norm') {
+    // Require legal modifiers
+    if (!event.modifiers.legal) {
+      throw new Error('Norm events must have legal modifiers');
+    }
+    
+    // Validate legal source type
+    if (!event.metadata.source.legalType) {
+      throw new Error('Norm events must specify source.legalType');
+    }
+    
+    // Validate deontic actions
+    if (event.statement.type === 'SVO') {
+      // Check if action has deontic type for legal statements
+      // (Optional but recommended for clarity)
+    }
+  }
+}
+
+// Validate norm force values
+const validNormForces = ['mandatory', 'default', 'advisory'];
+function validateNormForce(normForce?: string) {
+  if (normForce && !validNormForces.includes(normForce)) {
+    throw new Error(`Invalid normForce: ${normForce}`);
+  }
+}
+```
 
 ## Final Warnings
 
@@ -846,13 +953,15 @@ Remember: This is a foundation for a decentralized system. Every decision should
 ## Phase 1 Focus
 
 1. **Core Git operations** - init, add, commit, branch, merge
-2. **Confidence calculation** - (1 - V) × E × S formula only
-3. **Pattern observation** - Record what we see, don't validate
-4. **Clean architecture** - Interfaces and adapters for future flexibility
+2. **Dual event support** - Both fact (news) and norm (legal clause) events  
+3. **Confidence calculation** - (1 - V) × E × S formula for both fact and norm
+4. **Pattern observation** - Record what we see, don't validate
+5. **Clean architecture** - Interfaces and adapters for future flexibility
 
 ## What NOT to do in Phase 1
 
 1. **Don't define entity types** - Let them emerge from data
-2. **Don't validate relationships** - Just record them
-3. **Don't create complex rules** - Keep it simple
-4. **Don't optimize** - Clarity over performance
+2. **Don't validate relationships** - Just record them (except basic enum validation)
+3. **Don't create complex legal reasoning** - Simple deontic actions only
+4. **Don't build advanced applications** - Save compliance monitoring, smart contracts for Phase 4
+5. **Don't optimize** - Clarity over performance
