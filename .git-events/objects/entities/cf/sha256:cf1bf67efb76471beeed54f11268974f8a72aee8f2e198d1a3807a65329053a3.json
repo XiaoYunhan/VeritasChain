@@ -1,0 +1,12 @@
+{
+  "@context": "https://schema.org/",
+  "@type": "Thing",
+  "@id": "sha256:cf1bf67efb76471beeed54f11268974f8a72aee8f2e198d1a3807a65329053a3",
+  "logicalId": "6e877029-0e12-4712-9191-3ca6376d7ff1",
+  "version": "1.0",
+  "commitHash": "demo-commit-002",
+  "label": "14天父亲育儿假",
+  "dataType": {
+    "custom": "LegalBenefit"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "@id": "sha256:5bdbe3f526f59b102c4e0e39143def72f59863ea81b40e658f4534d65578e6bb",
+  "@context": "https://schema.org/",
+  "@type": "Thing",
+  "logicalId": "731cb025-9e2b-4dd3-8261-f872cd7591bf",
+  "version": "1.0",
+  "label": "Fintech Companies",
+  "properties": {
+    "description": "Financial technology companies"
+  }
+}

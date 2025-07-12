@@ -1,0 +1,13 @@
+{
+  "@id": "sha256:6c33db353f5c7eed1ee03cfdbb6adddb01a2113a94ca42e5cf93075d051701b6",
+  "@context": "https://schema.org/",
+  "@type": "Action",
+  "logicalId": "e81a6c97-d3db-4e0b-b8df-20bd34d64253",
+  "version": "1.0",
+  "label": "charges",
+  "category": "financial",
+  "properties": {
+    "deonticType": "standard",
+    "description": "Impose fees for services"
+  }
+}

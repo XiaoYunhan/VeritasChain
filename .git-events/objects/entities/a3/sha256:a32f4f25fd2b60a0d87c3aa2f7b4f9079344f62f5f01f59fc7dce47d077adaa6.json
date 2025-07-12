@@ -1,0 +1,13 @@
+{
+  "@context": "https://schema.org/",
+  "@type": "Thing",
+  "@id": "sha256:a32f4f25fd2b60a0d87c3aa2f7b4f9079344f62f5f01f59fc7dce47d077adaa6",
+  "logicalId": "888ed059-d5e4-4ab2-9587-d2f70d287186",
+  "version": "1.0",
+  "commitHash": "demo-commit-001",
+  "label": "JPMorgan Chase & Co.",
+  "description": "美国最大的银行之一",
+  "dataType": {
+    "custom": "FinancialInstitution"
+  }
+}

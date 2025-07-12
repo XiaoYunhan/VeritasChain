@@ -1,0 +1,49 @@
+{
+  "@context": "https://schema.org/",
+  "@type": "Event",
+  "@id": "sha256:47eed9c63721a61f94520932df3620dca6695f8460cbb792ef95e64b3ec33146",
+  "logicalId": "f780236a-31c6-41d3-9870-29be6499d998",
+  "version": "1.0",
+  "commitHash": "demo-commit-002",
+  "kind": "norm",
+  "title": "新加坡父亲育儿假法案2025",
+  "dateOccurred": "2024-12-15T00:00:00Z",
+  "dateRecorded": "2025-07-12T12:35:02.472Z",
+  "statement": {
+    "type": "SVO",
+    "subjectRef": "sha256:a31a74778a95847428617aa6e611cc6fc13e66d32333678dc655eb727799674e",
+    "verbRef": "sha256:f56ceeb80de2f370f6ea23e9deef44e7ee9a419e28fa7c3446f0df20e7fb98fd",
+    "objectRef": "sha256:cf1bf67efb76471beeed54f11268974f8a72aee8f2e198d1a3807a65329053a3"
+  },
+  "modifiers": {
+    "legal": {
+      "jurisdiction": "Singapore",
+      "effectiveDate": "2025-01-01T00:00:00Z",
+      "normForce": "mandatory",
+      "exception": "不适用于合同工"
+    },
+    "temporal": {
+      "when": "future",
+      "effectiveFrom": "2025-01-01T00:00:00Z"
+    },
+    "condition": {
+      "type": "when",
+      "condition": "孩子出生或收养"
+    },
+    "certainty": {
+      "evidence": "official",
+      "reliability": "high"
+    }
+  },
+  "metadata": {
+    "source": {
+      "name": "新加坡人力部",
+      "type": "Government",
+      "legalType": "statute"
+    },
+    "author": "mom.policy@gov.sg",
+    "confidence": 0.95,
+    "volatility": 0,
+    "legalHierarchyWeight": 0.95
+  }
+}

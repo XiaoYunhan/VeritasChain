@@ -1,0 +1,10 @@
+{
+  "@context": "https://schema.org/",
+  "@type": "Action",
+  "@id": "sha256:7d64a82f5ab335ac8bf1bac3b05a51322cdeb3eb188193fa3b416e96aa4b4ee6",
+  "logicalId": "f55b5f04-6768-4fcc-b355-6a5e901c8f99",
+  "version": "1.0",
+  "commitHash": "demo-commit-001",
+  "label": "收费",
+  "category": "financial-action"
+}

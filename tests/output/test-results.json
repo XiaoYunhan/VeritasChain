@@ -1,0 +1,830 @@
+{
+  "timestamp": "2025-07-12T17:27:41.885Z",
+  "summary": {
+    "total": 18,
+    "passed": 18,
+    "failed": 0,
+    "successRate": "100.0%"
+  },
+  "categories": {
+    "newsEvents": 9,
+    "legalClauses": 2,
+    "complexLogic": 5,
+    "coreFunctionality": 5
+  },
+  "parsedEvents": [
+    {
+      "originalText": "JPMorgan Chase & Co. has told financial-technology companies that it will start charging fees amounting to hundreds of millions of dollars for access to their customers' bank account information – a move that threatens to upend the industry's business models.",
+      "structuredEvent": {
+        "@context": "https://schema.org/",
+        "@type": "Event",
+        "@id": "sha256:1f3a1502840256a8cf55538647ae2593bfb8375184e753a63d6a7582ca750a87",
+        "logicalId": "jpmorgan-fintech-fees-001",
+        "version": "1.0",
+        "kind": "fact",
+        "title": "JPMorgan Charges Fintechs for Data Access",
+        "dateOccurred": "2025-01-15T09:00:00Z",
+        "dateRecorded": "2025-07-12T17:27:41.880Z",
+        "statement": {
+          "type": "SVO",
+          "subjectRef": "sha256:82b6fb3e6655b3e47284a6cbd8f312c6c39a3dc3fb30a579c194298f146de6c6",
+          "verbRef": "sha256:4433e5555c38937dc8f5133bfd561a1472d31da3f206179ce9fc608e31a9195f",
+          "objectRef": "sha256:48a392a1e861fefde4d0a3ab3d33c6f1dcac5a3bcfc9e9c399c90340d41df967"
+        },
+        "modifiers": {
+          "temporal": {
+            "when": "future",
+            "tense": "will"
+          },
+          "degree": {
+            "amount": "hundreds of millions USD",
+            "scale": "massive"
+          },
+          "purpose": {
+            "reason": "customer data access fees"
+          },
+          "manner": {
+            "method": "fee implementation",
+            "style": "aggressive"
+          },
+          "certainty": {
+            "evidence": "official",
+            "reliability": "high"
+          }
+        },
+        "relationships": [
+          {
+            "type": "threatens",
+            "target": "sha256:5aa82b4b8cf8b1495a504ff78ed139f389d7277139865c30b2254a34bc3e3b7c",
+            "strength": 0.9,
+            "description": "May upend industry business models"
+          }
+        ],
+        "metadata": {
+          "source": {
+            "name": "Financial Times",
+            "type": "NewsAgency",
+            "url": "https://ft.com/jpmorgan-fintech-fees"
+          },
+          "author": "finance.reporter@ft.com",
+          "confidence": 0.9,
+          "confidenceFormula": "(1 - 0.000) × 1 × 0.9 × 1 = 0.900",
+          "volatility": 0,
+          "evidenceScore": 1,
+          "sourceScore": 0.9
+        }
+      },
+      "parsing": {
+        "entities": [
+          {
+            "raw": "JPMorgan Chase & Co.",
+            "parsed": "Corporation",
+            "hash": "sha256:82b6fb3e6655b3e47284a6cbd8f312c6c39a3dc3fb30a579c194298f146de6c6"
+          },
+          {
+            "raw": "financial-technology companies",
+            "parsed": "CompanyGroup",
+            "hash": "sha256:48a392a1e861fefde4d0a3ab3d33c6f1dcac5a3bcfc9e9c399c90340d41df967"
+          }
+        ],
+        "action": {
+          "raw": "charging fees",
+          "parsed": "charges",
+          "hash": "sha256:4433e5555c38937dc8f5133bfd561a1472d31da3f206179ce9fc608e31a9195f"
+        },
+        "modifiers": {
+          "temporal": "will start",
+          "amount": "hundreds of millions of dollars",
+          "purpose": "for access to their customers' bank account information",
+          "impact": "threatens to upend the industry's business models"
+        }
+      }
+    },
+    {
+      "originalText": "The US is working toward an interim trade deal with India that may reduce its proposed tariffs to below 20%, putting the South Asian nation in a favorable position against its peers in the region.",
+      "structuredEvent": {
+        "@context": "https://schema.org/",
+        "@type": "Event",
+        "@id": "sha256:df5273ed39128319c94f60d93da54343c3f2d5355047cc41ea65801f2a698cd2",
+        "logicalId": "us-india-trade-negotiations-001",
+        "kind": "fact",
+        "title": "US-India Trade Deal Negotiations",
+        "statement": {
+          "type": "IMPLIES",
+          "operands": [
+            {
+              "type": "SVO",
+              "subjectRef": "sha256:4ab23ce70488913fd1ffa03eefdc1290bd2f6141cd324f548a5408f25a7802ac",
+              "verbRef": "sha256:d5a73863378b898a10121006ca1073d737c25978cdba33a4b0959d0b7fb84a54",
+              "objectRef": "sha256:46ecb6a36263bad7903bd287ebd29236cf886c61d53feb6a13ea0e7efc3e20a4"
+            },
+            {
+              "type": "SVO",
+              "subjectRef": "sha256:168635f421360331b8ab86f90bab9d769df55f244a2406e616afd18aac358bf8",
+              "verbRef": "sha256:5bde0e8e8cce341ec06230036110d76352d9ca51731a4c4c4e97603b7c18011e",
+              "objectRef": "sha256:497103dc6b2ddeba33afb379d444ddd422ba94cb09eed104d31494a7a38c78b9"
+            }
+          ]
+        },
+        "modifiers": {
+          "temporal": {
+            "when": "present",
+            "tense": "is"
+          },
+          "spatial": {
+            "region": "South Asia",
+            "scope": "regional"
+          },
+          "condition": {
+            "type": "possibility",
+            "condition": "interim deal success"
+          },
+          "degree": {
+            "threshold": "below 20%",
+            "scale": "medium"
+          },
+          "purpose": {
+            "goal": "favorable trade position vs regional peers"
+          },
+          "certainty": {
+            "evidence": "reported",
+            "reliability": "medium"
+          }
+        },
+        "relationships": [
+          {
+            "type": "partOf",
+            "target": "sha256:1a201fe41e797f48124cc2825b1d868be6e8b42121ebda54b8f372a81732f2f6",
+            "strength": 0.8,
+            "description": "Part of broader US trade strategy"
+          }
+        ],
+        "metadata": {
+          "source": {
+            "name": "Reuters",
+            "type": "NewsAgency"
+          },
+          "confidence": 0.7200000000000001
+        }
+      },
+      "parsing": {
+        "logicalStructure": "IF (US negotiates trade deal) THEN (tariffs reduce below 20%)",
+        "entities": [
+          {
+            "raw": "The US",
+            "parsed": "Country",
+            "hash": "sha256:4ab23ce70488913fd1ffa03eefdc1290bd2f6141cd324f548a5408f25a7802ac"
+          },
+          {
+            "raw": "India",
+            "parsed": "Country",
+            "relationship": "negotiation partner"
+          },
+          {
+            "raw": "tariffs",
+            "parsed": "Policy",
+            "hash": "sha256:168635f421360331b8ab86f90bab9d769df55f244a2406e616afd18aac358bf8"
+          }
+        ],
+        "conditionals": [
+          "may reduce",
+          "interim deal",
+          "favorable position"
+        ]
+      }
+    },
+    {
+      "originalText": "Effective January 1, 2025, all employees in Singapore shall be entitled to a minimum of 14 days paternity leave upon the birth or adoption of a child.",
+      "structuredEvent": {
+        "@context": "https://schema.org/",
+        "@type": "Event",
+        "@id": "sha256:d4ad838482fa27be3767be326b5d2fffe80330beb63712293c804350378c6f04",
+        "logicalId": "sg-paternity-leave-amendment-2025",
+        "kind": "norm",
+        "title": "Singapore Paternity Leave Amendment 2025",
+        "dateOccurred": "2024-12-15T00:00:00Z",
+        "statement": {
+          "type": "SVO",
+          "subjectRef": "sha256:3a3ceb62538c6d8d7d6378de289eede2a188ce37c4dc64141119d3f0e046e282",
+          "verbRef": "sha256:e58bab73695f6c662e10d82387aa0f06e48424fdfa22e43b8fbc3389b98ff938",
+          "objectRef": "sha256:10a30cde4cc52af136e5f566e6ae827af1bdc1c91ce024ee8b6b766ab5ae67db"
+        },
+        "modifiers": {
+          "temporal": {
+            "when": "future",
+            "effectiveFrom": "2025-01-01T00:00:00Z"
+          },
+          "legal": {
+            "jurisdiction": "Singapore",
+            "effectiveDate": "2025-01-01T00:00:00Z",
+            "normForce": "mandatory",
+            "exception": "Does not apply to contract workers"
+          },
+          "degree": {
+            "amount": "14 days minimum",
+            "scale": "medium"
+          },
+          "condition": {
+            "type": "upon",
+            "condition": "birth or adoption of child"
+          },
+          "certainty": {
+            "evidence": "official",
+            "reliability": "high"
+          }
+        },
+        "relationships": [
+          {
+            "type": "amends",
+            "target": "sha256:20511966a74c95836e13407bd2176d4a02339a03251fad01f96c227a8b22f45a",
+            "strength": 1,
+            "description": "Amends Singapore Employment Act Section 76"
+          }
+        ],
+        "metadata": {
+          "source": {
+            "name": "Ministry of Manpower Singapore",
+            "type": "Government",
+            "legalType": "statute"
+          },
+          "confidence": 0.95,
+          "legalHierarchyWeight": 0.95
+        }
+      },
+      "parsing": {
+        "deonticVerb": "shall be entitled to",
+        "legalSubject": "all employees in Singapore",
+        "legalObject": "minimum of 14 days paternity leave",
+        "conditions": "upon the birth or adoption of a child",
+        "effectiveDate": "January 1, 2025"
+      }
+    },
+    {
+      "originalText": "Company X denies reports that it will acquire Company Y, calling the rumors \"completely false and unfounded.\"",
+      "structuredEvent": {
+        "@type": "Event",
+        "kind": "fact",
+        "title": "Company X Denies Acquisition Rumors",
+        "statement": {
+          "type": "NOT",
+          "operands": [
+            {
+              "type": "SVO",
+              "subjectRef": "sha256:e0f75dc121336bd82fd9ac4b8e04a7e581a36d49348336f111f8b688005d8191",
+              "verbRef": "sha256:982a681cc14c664c2dec858127774a8888160e6eb72392fd0c3f350acf3b231d",
+              "objectRef": "sha256:c5ba4116eaae1621cffba19672bada03faf7fc1cc0dfffc5c38ef0c29a264699"
+            }
+          ]
+        },
+        "modifiers": {
+          "manner": {
+            "style": "public",
+            "intensity": "high"
+          },
+          "certainty": {
+            "evidence": "official",
+            "source": "Company X official statement"
+          }
+        },
+        "relationships": [
+          {
+            "type": "contradicts",
+            "target": "sha256:cbc5d4ac6266db32421aa46e5cf34132a4dbd3425a59a8598252352e4d5c874f",
+            "strength": 1
+          }
+        ]
+      },
+      "parsing": {
+        "logicalStructure": "NOT(Company X acquires Company Y)",
+        "denialStrength": "completely false and unfounded"
+      }
+    },
+    {
+      "originalText": "The merger can only proceed after regulatory approval, which must happen before the December deadline.",
+      "structuredEvent": {
+        "@type": "Event",
+        "kind": "fact",
+        "title": "Merger Timeline Dependencies",
+        "statement": {
+          "type": "AND",
+          "operands": [
+            {
+              "type": "BEFORE",
+              "operands": [
+                {
+                  "type": "SVO",
+                  "subjectRef": "sha256:regulatory-body",
+                  "verbRef": "sha256:approves",
+                  "objectRef": "sha256:merger"
+                },
+                {
+                  "type": "SVO",
+                  "subjectRef": "sha256:companies",
+                  "verbRef": "sha256:complete",
+                  "objectRef": "sha256:merger"
+                }
+              ]
+            },
+            {
+              "type": "BEFORE",
+              "operands": [
+                {
+                  "type": "SVO",
+                  "subjectRef": "sha256:approval",
+                  "verbRef": "sha256:happens",
+                  "objectRef": "sha256:deadline"
+                }
+              ],
+              "deadline": "2025-12-31T23:59:59Z"
+            }
+          ]
+        },
+        "modifiers": {
+          "temporal": {
+            "deadline": "2025-12-31T23:59:59Z"
+          },
+          "condition": {
+            "type": "provided that",
+            "condition": "regulatory approval granted"
+          }
+        }
+      },
+      "parsing": {
+        "temporalSequence": "approval BEFORE merger BEFORE deadline",
+        "dependencies": [
+          "regulatory approval",
+          "merger completion",
+          "December deadline"
+        ]
+      }
+    }
+  ],
+  "tests": [
+    {
+      "name": "Example 1: JPMorgan Fintech Fees",
+      "status": "PASS",
+      "duration": "2ms",
+      "details": "Parsed news into structured event. Confidence: 0.9 ((1 - 0.000) × 1 × 0.9 × 1 = 0.900)",
+      "parsedEvent": {
+        "originalText": "JPMorgan Chase & Co. has told financial-technology companies that it will start charging fees amounting to hundreds of millions of dollars for access to their customers' bank account information – a move that threatens to upend the industry's business models.",
+        "structuredEvent": {
+          "@context": "https://schema.org/",
+          "@type": "Event",
+          "@id": "sha256:1f3a1502840256a8cf55538647ae2593bfb8375184e753a63d6a7582ca750a87",
+          "logicalId": "jpmorgan-fintech-fees-001",
+          "version": "1.0",
+          "kind": "fact",
+          "title": "JPMorgan Charges Fintechs for Data Access",
+          "dateOccurred": "2025-01-15T09:00:00Z",
+          "dateRecorded": "2025-07-12T17:27:41.880Z",
+          "statement": {
+            "type": "SVO",
+            "subjectRef": "sha256:82b6fb3e6655b3e47284a6cbd8f312c6c39a3dc3fb30a579c194298f146de6c6",
+            "verbRef": "sha256:4433e5555c38937dc8f5133bfd561a1472d31da3f206179ce9fc608e31a9195f",
+            "objectRef": "sha256:48a392a1e861fefde4d0a3ab3d33c6f1dcac5a3bcfc9e9c399c90340d41df967"
+          },
+          "modifiers": {
+            "temporal": {
+              "when": "future",
+              "tense": "will"
+            },
+            "degree": {
+              "amount": "hundreds of millions USD",
+              "scale": "massive"
+            },
+            "purpose": {
+              "reason": "customer data access fees"
+            },
+            "manner": {
+              "method": "fee implementation",
+              "style": "aggressive"
+            },
+            "certainty": {
+              "evidence": "official",
+              "reliability": "high"
+            }
+          },
+          "relationships": [
+            {
+              "type": "threatens",
+              "target": "sha256:5aa82b4b8cf8b1495a504ff78ed139f389d7277139865c30b2254a34bc3e3b7c",
+              "strength": 0.9,
+              "description": "May upend industry business models"
+            }
+          ],
+          "metadata": {
+            "source": {
+              "name": "Financial Times",
+              "type": "NewsAgency",
+              "url": "https://ft.com/jpmorgan-fintech-fees"
+            },
+            "author": "finance.reporter@ft.com",
+            "confidence": 0.9,
+            "confidenceFormula": "(1 - 0.000) × 1 × 0.9 × 1 = 0.900",
+            "volatility": 0,
+            "evidenceScore": 1,
+            "sourceScore": 0.9
+          }
+        },
+        "parsing": {
+          "entities": [
+            {
+              "raw": "JPMorgan Chase & Co.",
+              "parsed": "Corporation",
+              "hash": "sha256:82b6fb3e6655b3e47284a6cbd8f312c6c39a3dc3fb30a579c194298f146de6c6"
+            },
+            {
+              "raw": "financial-technology companies",
+              "parsed": "CompanyGroup",
+              "hash": "sha256:48a392a1e861fefde4d0a3ab3d33c6f1dcac5a3bcfc9e9c399c90340d41df967"
+            }
+          ],
+          "action": {
+            "raw": "charging fees",
+            "parsed": "charges",
+            "hash": "sha256:4433e5555c38937dc8f5133bfd561a1472d31da3f206179ce9fc608e31a9195f"
+          },
+          "modifiers": {
+            "temporal": "will start",
+            "amount": "hundreds of millions of dollars",
+            "purpose": "for access to their customers' bank account information",
+            "impact": "threatens to upend the industry's business models"
+          }
+        }
+      }
+    },
+    {
+      "name": "Example 2: US-India Trade Deal",
+      "status": "PASS",
+      "duration": "0ms",
+      "details": "Complex IMPLIES logic parsed. Confidence: 0.7200000000000001",
+      "parsedEvent": {
+        "originalText": "The US is working toward an interim trade deal with India that may reduce its proposed tariffs to below 20%, putting the South Asian nation in a favorable position against its peers in the region.",
+        "structuredEvent": {
+          "@context": "https://schema.org/",
+          "@type": "Event",
+          "@id": "sha256:df5273ed39128319c94f60d93da54343c3f2d5355047cc41ea65801f2a698cd2",
+          "logicalId": "us-india-trade-negotiations-001",
+          "kind": "fact",
+          "title": "US-India Trade Deal Negotiations",
+          "statement": {
+            "type": "IMPLIES",
+            "operands": [
+              {
+                "type": "SVO",
+                "subjectRef": "sha256:4ab23ce70488913fd1ffa03eefdc1290bd2f6141cd324f548a5408f25a7802ac",
+                "verbRef": "sha256:d5a73863378b898a10121006ca1073d737c25978cdba33a4b0959d0b7fb84a54",
+                "objectRef": "sha256:46ecb6a36263bad7903bd287ebd29236cf886c61d53feb6a13ea0e7efc3e20a4"
+              },
+              {
+                "type": "SVO",
+                "subjectRef": "sha256:168635f421360331b8ab86f90bab9d769df55f244a2406e616afd18aac358bf8",
+                "verbRef": "sha256:5bde0e8e8cce341ec06230036110d76352d9ca51731a4c4c4e97603b7c18011e",
+                "objectRef": "sha256:497103dc6b2ddeba33afb379d444ddd422ba94cb09eed104d31494a7a38c78b9"
+              }
+            ]
+          },
+          "modifiers": {
+            "temporal": {
+              "when": "present",
+              "tense": "is"
+            },
+            "spatial": {
+              "region": "South Asia",
+              "scope": "regional"
+            },
+            "condition": {
+              "type": "possibility",
+              "condition": "interim deal success"
+            },
+            "degree": {
+              "threshold": "below 20%",
+              "scale": "medium"
+            },
+            "purpose": {
+              "goal": "favorable trade position vs regional peers"
+            },
+            "certainty": {
+              "evidence": "reported",
+              "reliability": "medium"
+            }
+          },
+          "relationships": [
+            {
+              "type": "partOf",
+              "target": "sha256:1a201fe41e797f48124cc2825b1d868be6e8b42121ebda54b8f372a81732f2f6",
+              "strength": 0.8,
+              "description": "Part of broader US trade strategy"
+            }
+          ],
+          "metadata": {
+            "source": {
+              "name": "Reuters",
+              "type": "NewsAgency"
+            },
+            "confidence": 0.7200000000000001
+          }
+        },
+        "parsing": {
+          "logicalStructure": "IF (US negotiates trade deal) THEN (tariffs reduce below 20%)",
+          "entities": [
+            {
+              "raw": "The US",
+              "parsed": "Country",
+              "hash": "sha256:4ab23ce70488913fd1ffa03eefdc1290bd2f6141cd324f548a5408f25a7802ac"
+            },
+            {
+              "raw": "India",
+              "parsed": "Country",
+              "relationship": "negotiation partner"
+            },
+            {
+              "raw": "tariffs",
+              "parsed": "Policy",
+              "hash": "sha256:168635f421360331b8ab86f90bab9d769df55f244a2406e616afd18aac358bf8"
+            }
+          ],
+          "conditionals": [
+            "may reduce",
+            "interim deal",
+            "favorable position"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Legal Example A: Singapore Paternity Leave",
+      "status": "PASS",
+      "duration": "1ms",
+      "details": "Legal clause parsed with deontic logic. Confidence: 0.95",
+      "parsedEvent": {
+        "originalText": "Effective January 1, 2025, all employees in Singapore shall be entitled to a minimum of 14 days paternity leave upon the birth or adoption of a child.",
+        "structuredEvent": {
+          "@context": "https://schema.org/",
+          "@type": "Event",
+          "@id": "sha256:d4ad838482fa27be3767be326b5d2fffe80330beb63712293c804350378c6f04",
+          "logicalId": "sg-paternity-leave-amendment-2025",
+          "kind": "norm",
+          "title": "Singapore Paternity Leave Amendment 2025",
+          "dateOccurred": "2024-12-15T00:00:00Z",
+          "statement": {
+            "type": "SVO",
+            "subjectRef": "sha256:3a3ceb62538c6d8d7d6378de289eede2a188ce37c4dc64141119d3f0e046e282",
+            "verbRef": "sha256:e58bab73695f6c662e10d82387aa0f06e48424fdfa22e43b8fbc3389b98ff938",
+            "objectRef": "sha256:10a30cde4cc52af136e5f566e6ae827af1bdc1c91ce024ee8b6b766ab5ae67db"
+          },
+          "modifiers": {
+            "temporal": {
+              "when": "future",
+              "effectiveFrom": "2025-01-01T00:00:00Z"
+            },
+            "legal": {
+              "jurisdiction": "Singapore",
+              "effectiveDate": "2025-01-01T00:00:00Z",
+              "normForce": "mandatory",
+              "exception": "Does not apply to contract workers"
+            },
+            "degree": {
+              "amount": "14 days minimum",
+              "scale": "medium"
+            },
+            "condition": {
+              "type": "upon",
+              "condition": "birth or adoption of child"
+            },
+            "certainty": {
+              "evidence": "official",
+              "reliability": "high"
+            }
+          },
+          "relationships": [
+            {
+              "type": "amends",
+              "target": "sha256:20511966a74c95836e13407bd2176d4a02339a03251fad01f96c227a8b22f45a",
+              "strength": 1,
+              "description": "Amends Singapore Employment Act Section 76"
+            }
+          ],
+          "metadata": {
+            "source": {
+              "name": "Ministry of Manpower Singapore",
+              "type": "Government",
+              "legalType": "statute"
+            },
+            "confidence": 0.95,
+            "legalHierarchyWeight": 0.95
+          }
+        },
+        "parsing": {
+          "deonticVerb": "shall be entitled to",
+          "legalSubject": "all employees in Singapore",
+          "legalObject": "minimum of 14 days paternity leave",
+          "conditions": "upon the birth or adoption of a child",
+          "effectiveDate": "January 1, 2025"
+        }
+      }
+    },
+    {
+      "name": "NOT Operator: Company Denial",
+      "status": "PASS",
+      "duration": "0ms",
+      "details": "NOT operator for denial/contradiction parsed",
+      "parsedEvent": {
+        "originalText": "Company X denies reports that it will acquire Company Y, calling the rumors \"completely false and unfounded.\"",
+        "structuredEvent": {
+          "@type": "Event",
+          "kind": "fact",
+          "title": "Company X Denies Acquisition Rumors",
+          "statement": {
+            "type": "NOT",
+            "operands": [
+              {
+                "type": "SVO",
+                "subjectRef": "sha256:e0f75dc121336bd82fd9ac4b8e04a7e581a36d49348336f111f8b688005d8191",
+                "verbRef": "sha256:982a681cc14c664c2dec858127774a8888160e6eb72392fd0c3f350acf3b231d",
+                "objectRef": "sha256:c5ba4116eaae1621cffba19672bada03faf7fc1cc0dfffc5c38ef0c29a264699"
+              }
+            ]
+          },
+          "modifiers": {
+            "manner": {
+              "style": "public",
+              "intensity": "high"
+            },
+            "certainty": {
+              "evidence": "official",
+              "source": "Company X official statement"
+            }
+          },
+          "relationships": [
+            {
+              "type": "contradicts",
+              "target": "sha256:cbc5d4ac6266db32421aa46e5cf34132a4dbd3425a59a8598252352e4d5c874f",
+              "strength": 1
+            }
+          ]
+        },
+        "parsing": {
+          "logicalStructure": "NOT(Company X acquires Company Y)",
+          "denialStrength": "completely false and unfounded"
+        }
+      }
+    },
+    {
+      "name": "BEFORE Operator: Merger Timeline",
+      "status": "PASS",
+      "duration": "0ms",
+      "details": "Temporal BEFORE operator with dependencies parsed",
+      "parsedEvent": {
+        "originalText": "The merger can only proceed after regulatory approval, which must happen before the December deadline.",
+        "structuredEvent": {
+          "@type": "Event",
+          "kind": "fact",
+          "title": "Merger Timeline Dependencies",
+          "statement": {
+            "type": "AND",
+            "operands": [
+              {
+                "type": "BEFORE",
+                "operands": [
+                  {
+                    "type": "SVO",
+                    "subjectRef": "sha256:regulatory-body",
+                    "verbRef": "sha256:approves",
+                    "objectRef": "sha256:merger"
+                  },
+                  {
+                    "type": "SVO",
+                    "subjectRef": "sha256:companies",
+                    "verbRef": "sha256:complete",
+                    "objectRef": "sha256:merger"
+                  }
+                ]
+              },
+              {
+                "type": "BEFORE",
+                "operands": [
+                  {
+                    "type": "SVO",
+                    "subjectRef": "sha256:approval",
+                    "verbRef": "sha256:happens",
+                    "objectRef": "sha256:deadline"
+                  }
+                ],
+                "deadline": "2025-12-31T23:59:59Z"
+              }
+            ]
+          },
+          "modifiers": {
+            "temporal": {
+              "deadline": "2025-12-31T23:59:59Z"
+            },
+            "condition": {
+              "type": "provided that",
+              "condition": "regulatory approval granted"
+            }
+          }
+        },
+        "parsing": {
+          "temporalSequence": "approval BEFORE merger BEFORE deadline",
+          "dependencies": [
+            "regulatory approval",
+            "merger completion",
+            "December deadline"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Example 3: Kraft Heinz Restructuring",
+      "status": "PASS",
+      "duration": "0ms",
+      "details": "Complex AND statement with temporal modifiers validated",
+      "parsedEvent": null
+    },
+    {
+      "name": "Example 4: Roblox Teen Millionaires",
+      "status": "PASS",
+      "duration": "0ms",
+      "details": "Wealth creation event with manner and degree modifiers validated",
+      "parsedEvent": null
+    },
+    {
+      "name": "Example 5: Delta Engine Cannibalization",
+      "status": "PASS",
+      "duration": "0ms",
+      "details": "International spatial modifiers with business purpose validated",
+      "parsedEvent": null
+    },
+    {
+      "name": "Example 6: Banking Talent Migration",
+      "status": "PASS",
+      "duration": "0ms",
+      "details": "Talent migration pattern with temporal and degree analysis",
+      "parsedEvent": null
+    },
+    {
+      "name": "Example 7: Ortega Hotel Acquisition",
+      "status": "PASS",
+      "duration": "0ms",
+      "details": "International real estate acquisition with monetary details",
+      "parsedEvent": null
+    },
+    {
+      "name": "Legal Example B: Contract Delivery Clause",
+      "status": "PASS",
+      "duration": "1ms",
+      "details": "Contract confidence: 0.76 (confirmed×contract = 0.95×0.8)",
+      "parsedEvent": null
+    },
+    {
+      "name": "Nested Logic: Economic Scenario",
+      "status": "PASS",
+      "duration": "0ms",
+      "details": "Multi-level nested logic: IMPLIES(AND(GT,SVO), OR(SVO,SVO))",
+      "parsedEvent": null
+    },
+    {
+      "name": "LT/GT Operators: Revenue Growth Thresholds",
+      "status": "PASS",
+      "duration": "0ms",
+      "details": "Quantitative comparison operators: LT(5%) and GT(15%) thresholds",
+      "parsedEvent": null
+    },
+    {
+      "name": "Content Hashing Consistency",
+      "status": "PASS",
+      "duration": "0ms",
+      "details": "Hash example: sha256:5ed30ac563dc0511d5... (consistent and unique)",
+      "parsedEvent": null
+    },
+    {
+      "name": "Pattern Observer and Relationship Validation",
+      "status": "PASS",
+      "duration": "0ms",
+      "details": "Validated 14 relationship types successfully",
+      "parsedEvent": null
+    },
+    {
+      "name": "Confidence Calculation Transparency",
+      "status": "PASS",
+      "duration": "1ms",
+      "details": "Confidence calculations verified:\n    News-Official: 0.9\n    News-Reported: 0.7200000000000001\n    Social-Rumored: 0.42\n    Legal-Statute: 0.95\n    Contract-Confirmed: 0.76\n    Government-Official: 0.95",
+      "parsedEvent": null
+    },
+    {
+      "name": "Event Kind Distinction",
+      "status": "PASS",
+      "duration": "0ms",
+      "details": "Fact vs Norm event types properly distinguished",
+      "parsedEvent": null
+    },
+    {
+      "name": "Logical Operator Coverage",
+      "status": "PASS",
+      "duration": "0ms",
+      "details": "Validated 9 logical operators: SVO, IMPLIES, AND, OR, NOT, BEFORE, GT, LT, EQ",
+      "parsedEvent": null
+    }
+  ]
+}

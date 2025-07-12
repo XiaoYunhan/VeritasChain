@@ -1,0 +1,22 @@
+SAMPLE.md Test Results
+Generated: 2025-07-12T17:27:41.885Z
+
+SUMMARY:
+- Total Tests: 18
+- Passed: 18
+- Failed: 0
+- Success Rate: 100.0%
+
+CATEGORIES:
+- News Events: 9 tests
+- Legal Clauses: 2 tests
+- Complex Logic: 5 tests
+- Core Functionality: 5 tests
+
+KEY INSIGHTS:
+- 5 events successfully parsed from raw text
+- Both factual news and legal normative clauses supported
+- Complex logical structures (IMPLIES, BEFORE, NOT) working
+- Confidence calculations transparent and deterministic
+
+See test-results.json for full parsed event structures.

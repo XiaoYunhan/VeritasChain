@@ -1,0 +1,44 @@
+{
+  "@context": "https://schema.org/",
+  "@type": "Event",
+  "@id": "sha256:92e6457bcbbb59ab2905bc6b4cf02120850c8f20c9aa2900371751bd35c568f5",
+  "logicalId": "f0f2cff9-f376-4cc0-83c4-023360ada36b",
+  "version": "1.0",
+  "commitHash": "demo-commit-001",
+  "kind": "fact",
+  "title": "JPMorgan向金融科技公司收取数据访问费",
+  "description": "摩根大通将对访问客户银行账户信息的金融科技公司收取数亿美元费用",
+  "dateOccurred": "2025-01-15T09:00:00Z",
+  "dateRecorded": "2025-07-12T12:35:02.470Z",
+  "statement": {
+    "type": "SVO",
+    "subjectRef": "sha256:a32f4f25fd2b60a0d87c3aa2f7b4f9079344f62f5f01f59fc7dce47d077adaa6",
+    "verbRef": "sha256:7d64a82f5ab335ac8bf1bac3b05a51322cdeb3eb188193fa3b416e96aa4b4ee6",
+    "objectRef": "sha256:19972f60c56e4e47cc095a422e6d982a15bc27fb8d052315b4026bd92625eaf5"
+  },
+  "modifiers": {
+    "degree": {
+      "amount": "数亿美元",
+      "scale": "massive"
+    },
+    "manner": {
+      "method": "新收费政策",
+      "intensity": "high"
+    },
+    "certainty": {
+      "evidence": "reported",
+      "reliability": "high"
+    }
+  },
+  "metadata": {
+    "source": {
+      "name": "Financial Times",
+      "type": "NewsAgency",
+      "url": "https://ft.com/jpmorgan-fintech-fees"
+    },
+    "author": "finance.reporter@ft.com",
+    "confidence": 0.7200000000000001,
+    "volatility": 0,
+    "sourceScore": 0.9
+  }
+}
