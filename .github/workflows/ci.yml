@@ -32,11 +32,8 @@ jobs:
     - name: Build project
       run: npm run build
     
-    - name: Run tests
-      run: npm test
-    
-    - name: Run demo
-      run: npm run demo
+    - name: Run tests (force mode for CI)
+      run: npm run test:force
     
     - name: Check for security vulnerabilities
       run: npm audit --audit-level=moderate

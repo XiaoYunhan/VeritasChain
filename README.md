@@ -592,9 +592,6 @@ npm run test:force
 
 # Quick compilation verification only
 npm run test:quick
-
-# Demo (used by GitHub CI)
-npm run demo
 ```
 
 **Two Test Modes:**
