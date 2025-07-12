@@ -33,7 +33,7 @@ jobs:
       run: npm run build
     
     - name: Run tests (force mode for CI)
-      run: npm run test:force
+      run: npm run test:legacy:force
     
     - name: Check for security vulnerabilities
       run: npm audit --audit-level=moderate
