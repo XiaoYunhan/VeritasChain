@@ -8,8 +8,10 @@
     "build": "tsc",
     "dev": "nodemon --exec 'npm run build && node dist/index.js'",
     "start": "node dist/index.js",
-    "test": "npm run build && node tests/sample-runner.js",
+    "test": "npm run build && node tests/storage-integration.js",
+    "test:force": "npm run build && node tests/storage-integration.js --force",
     "test:quick": "npm run build && node -e \"console.log('🧪 SAMPLE.md compilation verified - all 17 test case structures correct'); console.log('✅ 12 news events (kind=fact)'); console.log('✅ 2 legal clauses (kind=norm)'); console.log('✅ 3 complex logic examples'); console.log('✅ Core functionality verification (hash, confidence, relationships)'); console.log('💡 Run npm test for detailed test output')\"",
+    "demo": "npm run test:force",
     "test:watch": "jest --watch",
     "lint": "tsc --noEmit",
     "clean": "rm -rf dist"

@@ -46,6 +46,13 @@ class LocalContentStore<T> implements ContentStore<T> {
     await fs.writeFile(filePath, JSON.stringify(content, null, 2), 'utf-8');
   }
   
+  async forceStore(id: string, content: T): Promise<void> {
+    // Always store, even if file exists (for force-evaluation mode)
+    const filePath = this.getFilePath(id);
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.writeFile(filePath, JSON.stringify(content, null, 2), 'utf-8');
+  }
+  
   async retrieve(id: string): Promise<T | null> {
     try {
       const filePath = this.getFilePath(id);
@@ -143,6 +150,11 @@ class LocalEntityStore extends LocalContentStore<EntityObject> implements Entity
     await this.updateIndex(content);
   }
   
+  async forceStore(id: string, content: EntityObject): Promise<void> {
+    await super.forceStore(id, content);
+    await this.updateIndex(content);
+  }
+  
   async findByLogicalId(logicalId: string): Promise<EntityObject[]> {
     const ids = this.logicalIdIndex.get(logicalId) || [];
     const entities = await this.retrieveBatch(ids);
@@ -216,6 +228,11 @@ class LocalActionStore extends LocalContentStore<ActionObject> implements Action
   
   async store(id: string, content: ActionObject): Promise<void> {
     await super.store(id, content);
+    await this.updateIndexes(content);
+  }
+  
+  async forceStore(id: string, content: ActionObject): Promise<void> {
+    await super.forceStore(id, content);
     await this.updateIndexes(content);
   }
   
@@ -303,6 +320,11 @@ class LocalEventStore extends LocalContentStore<Event> implements EventStore {
   
   async store(id: string, content: Event): Promise<void> {
     await super.store(id, content);
+    await this.updateIndexes(content);
+  }
+  
+  async forceStore(id: string, content: Event): Promise<void> {
+    await super.forceStore(id, content);
     await this.updateIndexes(content);
   }
   

@@ -584,11 +584,40 @@ tests/
 
 ### Running Tests
 ```bash
-# Full test suite with detailed output
+# Full test suite (lazy mode - reuses existing objects)
 npm test
+
+# Force mode - clean and regenerate all objects
+npm run test:force
 
 # Quick compilation verification only
 npm run test:quick
+
+# Demo (used by GitHub CI)
+npm run demo
+```
+
+**Two Test Modes:**
+- **Lazy mode (default)**: `npm test` - Reuses existing objects with same hash (faster)
+- **Force mode**: `npm run test:force` - Cleans .git-events/ and regenerates everything (slower but fresh)
+
+**When to use force mode:**
+- Switching between test languages (English ↔ Chinese labels)
+- Updating test entity/action definitions
+- Debugging hash consistency issues
+- Ensuring clean state for CI/CD
+- After `git clone` (since .git-events/ is not tracked)
+
+**Examples:**
+```bash
+# After git clone - initialize storage
+npm run test:force
+
+# Regular development - reuse existing storage
+npm test
+
+# Verify created files
+find .git-events -name "*.json" | head -3 | xargs cat
 ```
 
 ### Test Coverage

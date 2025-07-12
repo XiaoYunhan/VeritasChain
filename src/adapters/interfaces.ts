@@ -21,6 +21,7 @@ import type {
 export interface ContentStore<T> {
   // Core CRUD operations
   store(id: string, content: T): Promise<void>;
+  forceStore(id: string, content: T): Promise<void>;  // Force overwrite even if exists
   retrieve(id: string): Promise<T | null>;
   exists(id: string): Promise<boolean>;
   delete(id: string): Promise<void>;

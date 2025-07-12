@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-07-12T17:27:41.885Z",
+  "timestamp": "2025-07-12T17:38:14.465Z",
   "summary": {
     "total": 18,
     "passed": 18,
@@ -24,7 +24,7 @@
         "kind": "fact",
         "title": "JPMorgan Charges Fintechs for Data Access",
         "dateOccurred": "2025-01-15T09:00:00Z",
-        "dateRecorded": "2025-07-12T17:27:41.880Z",
+        "dateRecorded": "2025-07-12T17:38:14.462Z",
         "statement": {
           "type": "SVO",
           "subjectRef": "sha256:82b6fb3e6655b3e47284a6cbd8f312c6c39a3dc3fb30a579c194298f146de6c6",
@@ -363,7 +363,7 @@
     {
       "name": "Example 1: JPMorgan Fintech Fees",
       "status": "PASS",
-      "duration": "2ms",
+      "duration": "1ms",
       "details": "Parsed news into structured event. Confidence: 0.9 ((1 - 0.000) × 1 × 0.9 × 1 = 0.900)",
       "parsedEvent": {
         "originalText": "JPMorgan Chase & Co. has told financial-technology companies that it will start charging fees amounting to hundreds of millions of dollars for access to their customers' bank account information – a move that threatens to upend the industry's business models.",
@@ -376,7 +376,7 @@
           "kind": "fact",
           "title": "JPMorgan Charges Fintechs for Data Access",
           "dateOccurred": "2025-01-15T09:00:00Z",
-          "dateRecorded": "2025-07-12T17:27:41.880Z",
+          "dateRecorded": "2025-07-12T17:38:14.462Z",
           "statement": {
             "type": "SVO",
             "subjectRef": "sha256:82b6fb3e6655b3e47284a6cbd8f312c6c39a3dc3fb30a579c194298f146de6c6",
@@ -738,7 +738,7 @@
     {
       "name": "Example 3: Kraft Heinz Restructuring",
       "status": "PASS",
-      "duration": "0ms",
+      "duration": "1ms",
       "details": "Complex AND statement with temporal modifiers validated",
       "parsedEvent": null
     },
@@ -773,7 +773,7 @@
     {
       "name": "Legal Example B: Contract Delivery Clause",
       "status": "PASS",
-      "duration": "1ms",
+      "duration": "0ms",
       "details": "Contract confidence: 0.76 (confirmed×contract = 0.95×0.8)",
       "parsedEvent": null
     },
@@ -808,7 +808,7 @@
     {
       "name": "Confidence Calculation Transparency",
       "status": "PASS",
-      "duration": "1ms",
+      "duration": "0ms",
       "details": "Confidence calculations verified:\n    News-Official: 0.9\n    News-Reported: 0.7200000000000001\n    Social-Rumored: 0.42\n    Legal-Statute: 0.95\n    Contract-Confirmed: 0.76\n    Government-Official: 0.95",
       "parsedEvent": null
     },
