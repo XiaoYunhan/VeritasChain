@@ -4,12 +4,12 @@
  * Global test configuration and custom matchers.
  */
 
-import { customMatchers } from './test-fixtures.js';
+// import { customMatchers } from './test-fixtures.js';
 
 // Extend Jest with custom matchers
-beforeAll(() => {
-  expect.extend(customMatchers);
-});
+// beforeAll(() => {
+//   expect.extend(customMatchers);
+// });
 
 // Global test timeout for storage operations
 jest.setTimeout(30000);
