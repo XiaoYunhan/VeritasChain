@@ -10,7 +10,7 @@ export default {
     }],
   },
   testMatch: [
-    '**/__tests__/**/*.test.ts',
+    '**/tests/**/*.test.ts',
     '**/?(*.)+(spec|test).ts'
   ],
   collectCoverageFrom: [
@@ -18,5 +18,64 @@ export default {
     '!src/**/*.d.ts',
     '!src/index.ts'
   ],
-  testEnvironment: 'node'
+  testEnvironment: 'node',
+  
+  // Test setup and teardown
+  setupFilesAfterEnv: ['<rootDir>/tests/helpers/setup.ts'],
+  globalTeardown: '<rootDir>/tests/helpers/cleanup.ts',
+  
+  // Coverage thresholds (CLAUDE.md requirement: 100% for core modules)
+  coverageThreshold: {
+    global: {
+      branches: 85,
+      functions: 90,
+      lines: 90,
+      statements: 90
+    },
+    './src/core/': {
+      branches: 100,
+      functions: 100,
+      lines: 100,
+      statements: 100
+    },
+    './src/types/': {
+      branches: 80,  // Type files may have fewer branches
+      functions: 90,
+      lines: 90,
+      statements: 90
+    }
+  },
+  
+  // Coverage reporting
+  coverageReporters: ['text', 'lcov', 'html'],
+  coverageDirectory: 'coverage',
+  
+  // Test timeout for storage operations
+  testTimeout: 15000,
+  
+  // Verbose output control
+  verbose: process.env.VERBOSE_TESTS === 'true',
+  
+  // Test file organization
+  roots: ['<rootDir>/src', '<rootDir>/tests'],
+  
+  // Module resolution
+  moduleDirectories: ['node_modules', 'src'],
+  
+  // Ignore patterns
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/dist/',
+    '/coverage/',
+    'tests/output/',
+    'tests/storage-integration.js'  // Old integration script
+  ],
+  
+  // Coverage ignore patterns
+  coveragePathIgnorePatterns: [
+    '/node_modules/',
+    '/dist/',
+    '/tests/',
+    'src/index.ts'
+  ]
 };
