@@ -1,6 +1,6 @@
 # VeritasChain
 
-A Git-like version control system for tracking news events and socio-economic data with logical reasoning support, designed with blockchain-ready architecture for future decentralization.
+A Git-like version control system for tracking events (news, economic, scientific) with logical reasoning support and transparent confidence calculation, designed with blockchain-ready architecture for future decentralization.
 
 ## Vision
 
@@ -20,7 +20,7 @@ Create a tamper-proof, decentralized system for tracking news events where:
 - [ ] SHA-256 content-addressing system
 - [ ] File-based storage with `.git-events/` structure
 - [ ] Basic CLI: init, add, commit, log
-- [ ] Volatility-based confidence calculation
+- [ ] Transparent confidence calculation: (1 - V) × E × S
 - [ ] Pattern observation (no validation)
 - [ ] 100% test coverage for core modules
 
@@ -43,8 +43,8 @@ Create a tamper-proof, decentralized system for tracking news events where:
 **Goal**: Smart features based on learned patterns
 
 - [ ] Type validation based on observed patterns
-- [ ] SVO relationship constraints (learned, not hardcoded)
-- [ ] Entity recognition and linking
+- [ ] Statement validation (SVO + logical clauses) - learned, not hardcoded
+- [ ] Entity/Action object linking and versioning
 - [ ] Temporal and spatial modifiers
 - [ ] Semantic search across events
 - [ ] Truth discovery for conflicting sources
@@ -75,88 +75,242 @@ Create a tamper-proof, decentralized system for tracking news events where:
 
 **Deliverable**: Fully decentralized news tracking system
 
-## Architecture Overview
+## Core Architecture Concepts
+
+### Unified Statement System
+VeritasChain supports both simple statements and complex logical reasoning through a unified type system:
+
+```typescript
+// Simple Subject-Verb-Object statements
+statement: {
+  type: 'SVO',
+  subjectRef: "sha256:company-abc...",
+  verbRef: "sha256:acquires-action...", 
+  objectRef: "sha256:startup-xyz..."
+}
+
+// Complex logical clauses with operators
+statement: {
+  type: 'AND',
+  operands: [
+    { type: 'SVO', ... },
+    { type: 'IMPLIES', operands: [...] }
+  ]
+}
+
+// Supported operators: AND, OR, NOT, IMPLIES, IFF, XOR, 
+// SUBSET, UNION, INTERSECTION, EXISTS, FORALL, GT, LT, EQ,
+// BEFORE, AFTER (temporal)
+```
+
+### Rich Modifier System
+Events support comprehensive context through standardized modifiers:
+
+```typescript
+modifiers: {
+  temporal: {
+    when: "present" | "past" | "future",
+    tense: string,
+    duration?: string,
+    frequency?: "once" | "daily" | "weekly" | "ongoing"
+  },
+  spatial: {
+    location?: string,
+    region?: string, 
+    scope: "local" | "regional" | "national" | "global"
+  },
+  manner: {
+    method?: string,
+    style?: "formal" | "informal" | "urgent",
+    intensity: "low" | "medium" | "high"
+  },
+  degree: {
+    amount?: string,     // "$10B", "50%", etc.
+    scale: "small" | "medium" | "large" | "massive",
+    threshold?: string
+  },
+  purpose: {
+    goal?: string,
+    reason?: string,
+    intention?: string
+  },
+  condition: {
+    type: "definite" | "possibility" | "necessity",
+    condition?: string,
+    certainty?: number  // 0-1
+  },
+  certainty: {
+    evidence: number,        // 0-1 (calculated from data quality)
+    source: number,          // 0-1 (based on source type)
+    reliability: "low" | "medium" | "high"
+  }
+}
+```
+
+### Version-Controlled Everything
+Every object (Entity, Action, Event) is version-controlled with content addressing:
+
+```typescript
+// Dual ID system - no confusion
+{
+  "@id": "sha256:abc123...",        // Content hash (unique per version)
+  "logicalId": "apple-inc-001",     // Groups all versions together
+  "version": "1.2",                 // Human-readable version
+  "commitHash": "sha256:def456..."  // Commit that created this version
+}
+```
+
+### Transparent Confidence Calculation
+Automatic confidence calculation with complete transparency:
+
+```typescript
+// NEVER set confidence manually - always calculated
+confidence = (1 - volatility) × evidenceFactor × sourceFactor
+
+// Where:
+// volatility   = calculated from change frequency (0 = stable, 1 = chaotic)
+// evidence     = quality of supporting data (0.7 = reported, 0.9 = confirmed, 1.0 = primary)
+// source       = source reliability (Academic=1.0, NewsAgency=0.9, Social=0.7)
+```
+
+## Technical Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    User Interface Layer                      │
-│                  (CLI / Web UI / API)                       │
+│          (CLI / Web UI / API /v1/ endpoints)                │
 ├─────────────────────────────────────────────────────────────┤
 │                    Repository Layer                          │
-│         (Event Management, Commits, Branches)               │
+│    (Event/Entity/Action Management, Commits, Branches)      │
 ├─────────────────────────────────────────────────────────────┤
 │                    Adapter Layer                            │
 │     ┌──────────────┐              ┌──────────────┐         │
 │     │ Local Store  │              │ Blockchain   │         │
 │     │ (Phase 1-3)  │              │ (Phase 4-5)  │         │
+│     │  JSON Files  │              │ Smart Contract│         │
 │     └──────────────┘              └──────────────┘         │
 ├─────────────────────────────────────────────────────────────┤
 │                     Core Layer                              │
-│      (Hashing, Signatures, Merkle Trees, Types)            │
+│   (SHA-256, Ed25519, Confidence Calculator, Pattern Observer)│
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### Key Design Principles
 
-1. **Adapter Pattern**: Storage is abstracted behind interfaces
-2. **Content Addressing**: All data identified by cryptographic hash
-3. **Immutability**: Events and commits are never modified
-4. **Cryptographic Integrity**: Optional now, mandatory for blockchain
-5. **Progressive Enhancement**: Each phase adds capabilities
+1. **Dual ID System**: Content hash (@id) + logical grouping (logicalId) - no confusion
+2. **Content Addressing**: All data identified by SHA-256 hash for integrity
+3. **Version Control Everything**: Entities, Actions, Events all have commit history
+4. **Transparent Confidence**: Auto-calculated (1-V)×E×S formula, never manual
+5. **Logical Reasoning Support**: Unified statements (SVO + logical operators)
+6. **Adapter Pattern**: Storage abstracted (file system → blockchain migration)
+7. **Minimal Dependencies**: Only 4 runtime deps (express, uuid, @noble/hashes, @noble/ed25519)
+8. **Progressive Enhancement**: Each phase adds capabilities without breaking changes
+
+### File Structure
+```
+VeritasChain/
+├── .git-events/              # Data storage (Git-like)
+│   ├── objects/             # Content-addressed storage
+│   │   ├── events/         # Event objects  
+│   │   ├── entities/       # Entity objects
+│   │   ├── actions/        # Action objects
+│   │   └── commits/        # Commit objects
+│   ├── refs/heads/         # Branch pointers
+│   └── HEAD                # Current branch
+├── src/
+│   ├── types/              # TypeScript definitions
+│   │   ├── event.ts       # Event interfaces (Statement, Modifiers)
+│   │   ├── entity.ts      # EntityObject, ActionObject  
+│   │   ├── commit.ts      # Commit interfaces
+│   │   └── confidence.ts  # Confidence calculation types
+│   ├── core/
+│   │   ├── hash.ts        # SHA-256 utilities (@noble/hashes)
+│   │   ├── confidence.ts  # Transparent (1-V)×E×S calculator
+│   │   └── patterns.ts    # Pattern observer (Phase 2 prep)
+│   ├── adapters/
+│   │   ├── interfaces.ts  # Storage interfaces
+│   │   └── local.ts       # File system implementation
+│   ├── repository/        # Git-like operations
+│   └── api/               # Express server (/v1/ endpoints)
+└── tests/                 # 100% test coverage requirement
+```
 
 ## Target Effect Examples
 
-### Example 1: Multi-Source News Tracking
+### Example 1: Multi-Source Event Tracking with Logical Reasoning
 
 ```typescript
-// Bloomberg reports
+// Bloomberg reports with SVO statement
 const bloombergEvent = await repo.addEvent({
-  headline: "Tech Corp Announces $10B Acquisition",
-  content: {
-    svo: {
-      subject: { id: "Q95", type: "Company", label: "Tech Corp" },
-      verb: { id: "acquires", label: "acquires" },
-      object: { id: "Q123", type: "Company", label: "StartupAI" }
-    }
+  "@id": "sha256:d4e5f67...", // Content hash (auto-generated)
+  logicalId: "tech-acquisition-001",
+  title: "Tech Corp Announces Acquisition",
+  dateOccurred: "2025-01-15T09:00:00Z",
+  dateRecorded: "2025-01-15T10:30:00Z",
+  statement: {
+    type: 'SVO',
+    subjectRef: "sha256:tech-corp-entity...",
+    verbRef: "sha256:acquires-action...",
+    objectRef: "sha256:startupai-entity..."
   },
-  metadata: { source: "Bloomberg", confidence: 0.95 }
+  modifiers: {
+    degree: { amount: "$10B", scale: "massive" },
+    certainty: { confidence: 0.95, source: "official", evidence: "confirmed" }
+  },
+  metadata: {
+    source: { name: "Bloomberg", type: "NewsAgency" },
+    author: "finance.reporter@bloomberg.com"
+  }
 });
 
-// Reuters reports slightly different
+// Reuters reports with logical clause (IMPLIES relationship)
 const reutersEvent = await repo.addEvent({
-  headline: "Tech Corp to Acquire StartupAI for $9.8B",
-  content: {
-    svo: {
-      subject: { id: "Q95", type: "Company", label: "Tech Corp" },
-      verb: { id: "acquires", label: "acquires" },
-      object: { id: "Q123", type: "Company", label: "StartupAI" }
-    }
+  statement: {
+    type: 'IMPLIES',
+    operands: [
+      { type: 'SVO', subjectRef: "sha256:tech-corp...", verbRef: "sha256:acquires...", objectRef: "sha256:startupai..." },
+      { type: 'SVO', subjectRef: "sha256:deal-value...", verbRef: "sha256:equals...", objectRef: "sha256:9-8b-amount..." }
+    ]
   },
-  metadata: { source: "Reuters", confidence: 0.90 }
+  modifiers: {
+    degree: { amount: "$9.8B", scale: "massive" },
+    certainty: { confidence: 0.90, source: "reported", evidence: "confirmed" }
+  }
 });
 
-// System detects similarity and suggests merge
-const conflicts = await repo.detectConflicts(bloombergEvent, reutersEvent);
-// Output: { field: "acquisition_value", values: ["$10B", "$9.8B"] }
+// System calculates confidence using (1-V) × E × S formula
+const confidence = calculator.calculate({
+  volatility: 0.1,     // Low change frequency
+  evidence: 0.9,       // High evidence quality  
+  source: 0.95         // Bloomberg source factor
+});
+// Result: (1-0.1) × 0.9 × 0.95 = 0.77
 ```
 
-### Example 2: Historical Timeline Reconstruction
+### Example 2: Version-Controlled Entity Evolution
 
 ```typescript
-// Query: Show evolution of Ukraine conflict reporting
-const timeline = await repo.queryTimeline({
-  topic: "Ukraine",
-  dateRange: { start: "2024-01-01", end: "2024-12-31" },
-  sources: ["Reuters", "AP", "Bloomberg"]
-});
+// Track how an entity evolves over time through commits
+const appleHistory = await repo.getEntityHistory("apple-inc-logical-id");
 
-// Returns commit graph showing how story evolved
+// Returns version-controlled object history
 /*
-Initial Report (Jan 1) ─┬─> Reuters Update (Jan 2)
-                       ├─> AP Confirmation (Jan 2)
-                       └─> Bloomberg Analysis (Jan 3)
-                              └─> Merged Consensus (Jan 4)
+Commit abc123... (Jan 1): Apple Inc (name: "Apple Inc", revenue: $365B)
+  ├─> Commit def456... (Mar 15): Updated revenue to $383B
+  ├─> Commit ghi789... (Jun 1): Added CEO change (Tim Cook -> John Doe)
+  └─> Commit jkl012... (Dec 31): Annual report updates
 */
+
+// Each version has different @id but same logicalId
+const versions = [
+  { "@id": "sha256:abc123...", logicalId: "apple-inc", version: "1.0", revenue: "$365B" },
+  { "@id": "sha256:def456...", logicalId: "apple-inc", version: "1.1", revenue: "$383B" },
+  { "@id": "sha256:ghi789...", logicalId: "apple-inc", version: "1.2", ceo: "John Doe" }
+];
+
+// Git-like operations work on logical entities
+await repo.diff("apple-inc", "1.0", "1.2");
+// Shows: revenue change, CEO change, confidence evolution
 ```
 
 ### Example 3: Blockchain Verification (Future)
@@ -214,52 +368,94 @@ npm run dev
 import { Repository } from './src';
 
 // Initialize a new repository
-const repo = await Repository.init('./my-news-data');
+const repo = await Repository.init('./my-events-data');
 
-// Add your first event
+// Create version-controlled entities first
+const mitEntity = await repo.createEntity({
+  logicalId: "mit-institution",
+  label: "MIT",
+  dataType: { custom: "Institution", description: "Educational institution" },
+  properties: {
+    fullName: "Massachusetts Institute of Technology",
+    location: "Cambridge, MA",
+    type: "University"
+  }
+});
+
+// Create an action
+const announcesAction = await repo.createAction({
+  logicalId: "announces-action",
+  label: "announces",
+  category: "communication"
+});
+
+// Add your first event with proper structure
 const event = await repo.addEvent({
-  headline: "Breaking: Major Scientific Discovery",
-  content: {
-    svo: {
-      subject: { id: "Q1", type: "Institution", label: "MIT" },
-      verb: { id: "announces", label: "announces" },
-      object: { id: "Q2", type: "Discovery", label: "Room-temperature superconductor" }
+  title: "MIT Announces Scientific Breakthrough",
+  dateOccurred: "2025-01-15T14:00:00Z",
+  statement: {
+    type: 'SVO',
+    subjectRef: mitEntity['@id'],
+    verbRef: announcesAction['@id'],
+    objectRef: "sha256:superconductor-discovery..."  // Reference to discovery entity
+  },
+  modifiers: {
+    temporal: { when: "present", tense: "announces" },
+    certainty: { 
+      evidence: 0.95,    // High evidence quality
+      source: 1.0,       // Direct from source
+      // Volatility calculated automatically from change history
     }
   },
   metadata: {
-    source: "MIT News",
-    confidence: 1.0,
+    source: { name: "MIT News", type: "Academic", url: "https://news.mit.edu/..." },
     author: "pr@mit.edu"
   }
 });
 
-// Commit the change
+// Commit with transparent tracking
 const commit = await repo.commit("Add superconductor announcement");
 console.log(`Committed: ${commit.id}`);
+// Confidence auto-calculated: (1-0.0) × 0.95 × 1.0 = 0.95
 ```
 
 ## Technical Stack
 
-### Current (Phase 1)
-- **Language**: TypeScript with strict mode
-- **Storage**: File system (JSON)
-- **Hashing**: SHA-256 (@noble/hashes)
-- **Confidence**: Simple volatility-based calculation
-- **Patterns**: Observation only, no validation
-- **API**: Express.js (minimal)
-- **Testing**: Jest with ts-jest
+### Current (Phase 1) - Minimal Dependencies
+```json
+{
+  "dependencies": {
+    "express": "^4.18.0",           // API server
+    "uuid": "^9.0.0",               // LogicalId generation
+    "@noble/hashes": "^1.3.0",      // SHA-256 (blockchain-compatible)
+    "@noble/ed25519": "^2.0.0"      // Signatures (blockchain-ready)
+  }
+}
+```
+
+**Core Technologies:**
+- **Language**: TypeScript 5+ with strict mode (no `any` allowed)
+- **Storage**: File system (JSON) with `.git-events/` structure
+- **Hashing**: SHA-256 content addressing (@noble/hashes)
+- **Confidence**: Auto-calculated (1-V)×E×S - never manual
+- **ID System**: Dual IDs - @id (content hash) + logicalId (UUID grouping)
+- **Statements**: Unified SVO + logical operators (AND, OR, NOT, IMPLIES, etc.)
+- **Versioning**: All objects (Entity/Action/Event) are version-controlled
+- **API**: Express.js with `/v1/` versioned endpoints
+- **Testing**: Jest with ts-jest (100% coverage requirement)
 
 ### Phase 2-3 Additions
-- **Type System**: Learned from observed patterns
-- **Validation**: Gradual introduction based on data
-- **Search**: Basic indexing and queries
+- **Pattern Learning**: ML-based type inference from observed data
+- **Validation**: Gradual constraints based on learned patterns (not hardcoded)
+- **Search**: Semantic search across version-controlled objects
+- **Confidence Evolution**: Track confidence changes over entity lifetime
 
-### Future (Phases 4-5)
-- **Blockchain**: Ethereum/Polygon
-- **Smart Contracts**: Solidity
-- **Storage**: IPFS for content
-- **Identity**: Ethereum addresses / DIDs
-- **Signatures**: Ed25519 / Secp256k1
+### Future (Phases 4-5) - Blockchain Migration
+- **Blockchain**: Ethereum/Polygon smart contracts
+- **Storage**: Hybrid (IPFS for content + blockchain for proofs)
+- **Identity**: Ethereum addresses / DIDs with MetaMask integration
+- **Consensus**: Multi-organization validation
+- **Migration**: Seamless transition from local to decentralized storage
 
 ## Design Philosophy
 
@@ -270,14 +466,20 @@ Rather than imposing a rigid type system upfront, the system observes patterns i
 2. **Phase 2**: Identify patterns, suggest types
 3. **Phase 3**: Enforce learned constraints
 
-### Confidence Through Stability
-Confidence is simply `1 - volatility`. Events that change frequently have low confidence, stable events have high confidence. No complex formulas or arbitrary weights.
+### Confidence Through Transparency
+Confidence uses a simple multiplication formula: `(1 - Volatility) × Evidence × Source`. This ensures transparency and removes arbitrary weights.
 
 ```typescript
-// Simple and transparent
-confidence = 1 - volatility
+// Transparent and explainable: confidence = (1 - V) × E × S
+const confidence = (1 - volatility) * evidenceFactor * sourceFactor;
 
-// Where volatility = standard deviation of change rate
+// Where:
+// V = volatility (0-1, from change frequency analysis)
+// E = evidence quality (0-1, based on supporting data)
+// S = source reliability (0-1, based on source type and history)
+
+// Example calculation:
+confidence = (1 - 0.1) * 0.9 * 0.95 = 0.77;
 ```
 
 ## Design Decisions
@@ -294,11 +496,12 @@ confidence = 1 - volatility
 - No external dependencies
 - Natural fit for Git-like operations
 
-### Why Volatility-Based Confidence?
-- Simple formula: confidence = 1 - volatility
-- No arbitrary weights or subjective scoring
-- Self-explanatory to users
-- Directly reflects data stability
+### Why Multiplication-Based Confidence?
+- **Extreme Simplicity**: confidence = (1 - V) × E × S - no weights, no parameters
+- **Complete Transparency**: Each factor (V, E, S) is independently calculable and explainable
+- **Auto-Calculation**: System computes volatility from change history, never manual
+- **Intuitive**: Low volatility + high evidence + reliable source = high confidence
+- **Blockchain Ready**: Deterministic calculation suitable for smart contracts
 
 ### Why Learn Types from Data?
 - Real-world patterns are complex
@@ -314,14 +517,37 @@ confidence = 1 - volatility
 
 ## Contributing
 
-See [CLAUDE.md](./CLAUDE.md) for strict development guidelines.
+See [CLAUDE.md](./CLAUDE.md) for comprehensive development instructions.
 
-Key rules:
-1. No external databases
-2. Minimal dependencies
-3. Everything must be typed
-4. Adapter pattern for storage
-5. Think blockchain-first
+### Critical Rules (Zero Tolerance)
+1. **NO EXTERNAL DATABASES** - Only file system (.git-events/)
+2. **NO NEW DEPENDENCIES** - Stick to the 4 allowed runtime deps
+3. **EVERYTHING TYPED** - TypeScript strict mode, no `any` allowed
+4. **NEVER SET CONFIDENCE MANUALLY** - Always auto-calculate (1-V)×E×S
+5. **DUAL ID SYSTEM** - @id (content hash) + logicalId (UUID grouping)
+
+### Implementation Requirements
+- **Phase 1 Focus**: Git-like operations, pattern observation (no validation)
+- **Type Safety**: Define interfaces before implementations
+- **Adapter Pattern**: Storage abstracted for future blockchain migration
+- **Content Addressing**: All objects identified by SHA-256 hash
+- **Version Control**: Entities, Actions, Events tracked through commits
+- **Test Coverage**: 100% required for core modules
+
+### Development Workflow
+```bash
+# Setup
+npm install
+npm run build
+npm test
+
+# Development
+npm run dev       # Start with nodemon
+npm run lint      # Type checking
+npm test -- --watch  # Continuous testing
+```
+
+See [SAMPLE.md](./SAMPLE.md) for real-world examples of the event specification.
 
 ## License
 

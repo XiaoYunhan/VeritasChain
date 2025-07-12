@@ -29,19 +29,116 @@ This project implements a Git-like version control system for news events with *
 
 ### 2. Data Structure Rules (TypeScript STRICT)
 
+#### ID System (CRITICAL - No Confusion)
+```typescript
+/*
+  SINGLE SOURCE OF TRUTH for identifiers:
+  
+  @id:       SHA-256 content hash - ONLY unique identifier for storage/retrieval
+  logicalId: UUID v4 - Groups multiple versions of the same logical entity
+  
+  Example:
+  - "Apple Inc" entity has logicalId: "550e8400-e29b-41d4-a716-446655440000"
+  - Version 1.0 has @id: "abc123..." (hash of v1.0 content)  
+  - Version 1.1 has @id: "def456..." (hash of v1.1 content)
+  - Both versions share the same logicalId
+  - history["550e8400-..."] = ["abc123...", "def456..."]
+*/
+```
+
 #### Core Object Model (Version-Controlled)
 ```typescript
-// Flexible data type system
+// Robust data type system with proper validation
 type DataType = 
+  // Built-in primitive types
   | 'string' | 'number' | 'boolean' | 'date' | 'bigint'
-  | { custom: string; schema?: any }
+  
+  // Array types
+  | { array: DataType }
+  
+  // Custom types with structured schema
+  | { 
+      custom: string; 
+      schema: JSONSchema | ZodSchema | EnumValues;
+      description?: string;
+    }
+  
+  // Structured object types  
   | { struct: Record<string, DataType> }
-  | { ref: string };
+  
+  // Reference to another entity (by @id)
+  | { ref: string; entityType?: string }
+  
+  // Union types for flexibility
+  | { union: DataType[] };
 
-// Entity as first-class versioned object
+// Schema validation options
+interface JSONSchema {
+  type: 'object' | 'array' | 'string' | 'number' | 'boolean';
+  properties?: Record<string, any>;
+  required?: string[];
+  pattern?: string;      // For string validation
+  minimum?: number;      // For number validation
+  maximum?: number;
+  enum?: any[];         // For enum validation
+}
+
+interface ZodSchema {
+  zodType: string;      // e.g., "string().email()"
+  serialized: string;   // Base64-encoded JSON schema definition  
+  description?: string; // Human-readable description
+}
+
+interface EnumValues {
+  values: string[];     // Simple enum list
+  description?: string;
+}
+
+// Examples of DataType usage:
+/*
+  // Simple types
+  "string"
+  "number" 
+  
+  // Custom currency type
+  {
+    custom: "Currency",
+    schema: {
+      type: "object",
+      properties: {
+        amount: { type: "number", minimum: 0 },
+        currency: { type: "string", enum: ["USD", "EUR", "GBP"] }
+      },
+      required: ["amount", "currency"]
+    }
+  }
+  
+  // Reference to another entity
+  { ref: "abc123hash", entityType: "Company" }
+  
+  // Array of references
+  { array: { ref: "entity", entityType: "Subsidiary" } }
+  
+  // Union type for flexible values
+  { union: ["string", "number", { custom: "Percentage" }] }
+  
+  // Zod schema example (improved storage)
+  {
+    custom: "Email",
+    schema: {
+      zodType: "string().email()",
+      serialized: "eyJ0eXBlIjoic3RyaW5nIiwicGF0dGVybiI6Ii4uLiJ9", // base64(jsonSchema)
+      description: "Valid email address"
+    }
+  }
+*/
+
+// Entity as first-class versioned object  
 interface EntityObject {
-  id: string;
+  "@id": string;        // SHA-256 hash of content (ONLY identifier)
+  logicalId: string;    // Logical entity identifier (UUID v4)
   type: string;
+  version: string;      // Semantic version
   commitHash: string;
   
   properties: Record<string, {
@@ -50,16 +147,18 @@ interface EntityObject {
     commitHash?: string;  // For referenced entities
   }>;
   
-  previousVersion?: string;
+  previousVersion?: string;  // @id of previous version
 }
 
 // Action as versioned object
 interface ActionObject {
-  id: string;
+  "@id": string;        // SHA-256 hash of content (ONLY identifier)
+  logicalId: string;    // Logical action identifier (UUID v4)  
   type: string;
+  version: string;      // Semantic version
   commitHash: string;
   properties?: Record<string, any>;
-  previousVersion?: string;
+  previousVersion?: string;  // @id of previous version
 }
 
 // Unified statement structure for logical reasoning
@@ -96,12 +195,12 @@ interface LogicalClause {
 interface Event {
   "@context": "https://schema.org/";
   "@type": "Event";  // Generic event type
-  "@id": string;  // SHA-256 hash of content
+  "@id": string;  // SHA-256 hash of content (ONLY identifier)
   
   // Event versioning (trackable via commits)
-  id: string;  // Logical event ID (can have multiple versions)
-  version: string;
-  previousVersion?: string;
+  logicalId: string;  // Logical event identifier (UUID v4)
+  version: string;    // Semantic version (1.0, 1.1, etc.)
+  previousVersion?: string;  // @id of previous version
   commitHash: string;
   
   // Core content
@@ -114,7 +213,7 @@ interface Event {
   // Unified logical statement (可以是简单SVO或复杂逻辑结构)
   statement: Statement;
   
-  // Context and modifiers (状语和定语)
+  // Context and modifiers (状语和定语) - STANDARDIZED
   modifiers: {
     temporal?: TemporalModifier;    // 时间状语 (when, duration, frequency)
     spatial?: SpatialModifier;      // 地点状语 (where, location)
@@ -124,12 +223,136 @@ interface Event {
     condition?: ConditionalModifier; // 条件状语 (if, unless)
     certainty?: CertaintyModifier;   // 确定性定语 (probable, certain)
   };
+
+// STANDARDIZED MODIFIER TYPES (Prevent spelling errors)
+interface TemporalModifier {
+  when?: 'past' | 'present' | 'future' | 'ongoing';
+  tense?: 'will' | 'did' | 'is' | 'was' | 'has been';
+  duration?: string;  // ISO 8601 duration or free text
+  frequency?: 'once' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'occasional' | 'frequent';
+  phase?: 'starting' | 'preparing' | 'continuing' | 'ending' | 'completed';
+  sequence?: 'before' | 'after' | 'during' | 'simultaneous';
+  context?: string;   // Free text for specific temporal context
+}
+
+interface SpatialModifier {
+  location?: string;           // Specific place name
+  from?: string;              // Origin location
+  to?: string;                // Destination location
+  region?: string;            // Geographic region
+  scope?: 'local' | 'regional' | 'national' | 'international' | 'global';
+  coordinate?: {              // Optional GPS coordinates
+    lat: number;
+    lng: number;
+  };
+}
+
+interface MannerModifier {
+  method?: string;            // How something is done
+  mechanism?: string;         // Underlying mechanism
+  style?: 'formal' | 'informal' | 'aggressive' | 'diplomatic' | 'secretive' | 'public';
+  intensity?: 'low' | 'medium' | 'high' | 'extreme';
+  type?: string;              // Free text for manner type
+  impact?: string;            // Resulting impact
+}
+
+interface DegreeModifier {
+  amount?: string;            // Specific amount (e.g., "$113M", "40%")
+  scale?: 'small' | 'medium' | 'large' | 'massive';
+  threshold?: string;         // Comparison threshold (e.g., "below 20%")
+  outcome?: string;           // Resulting outcome
+  intensity?: 'minimal' | 'moderate' | 'significant' | 'extreme';
+}
+
+interface PurposeModifier {
+  reason?: string;            // Primary reason
+  goal?: string;              // Intended goal
+  goals?: string[];           // Multiple goals
+  intention?: string;         // Underlying intention
+  primary?: string;           // Primary purpose
+  secondary?: string;         // Secondary purpose
+}
+
+interface ConditionalModifier {
+  type?: 'if' | 'unless' | 'provided that' | 'assuming' | 'possibility' | 'potential';
+  condition?: string;         // Specific condition
+  certainty?: number;         // 0-1 probability
+  dependency?: string;        // What this depends on
+}
+
+interface CertaintyModifier {
+  confidence?: number;        // 0-1 confidence level
+  source?: string;           // Source of information
+  reliability?: 'low' | 'medium' | 'high' | 'verified';
+  probability?: number;      // 0-1 probability estimate
+  evidence?: 'hearsay' | 'reported' | 'confirmed' | 'verified' | 'official';
+}
   
-  // Relationships
-  relatedEvents?: string[];  // Event hashes
-  derivedFrom?: string[];    // Source event hashes
-  causedBy?: string[];       // Causal predecessors
-  causes?: string[];         // Causal consequences
+  // UNIFIED RELATIONSHIP SYSTEM (No more field confusion)
+  relationships?: EventRelationship[];
+
+// Relationship types - unified and clear
+interface EventRelationship {
+  type: 
+    // Causal relationships
+    | 'causedBy'        // This event was caused by target
+    | 'causes'          // This event causes target
+    | 'enables'         // This event enables target
+    | 'prevents'        // This event prevents target
+    | 'threatens'       // This event threatens target
+    
+    // Informational relationships  
+    | 'derivedFrom'     // This event info derived from target
+    | 'supports'        // This event supports target's claims
+    | 'contradicts'     // This event contradicts target
+    | 'updates'         // This event updates target
+    | 'corrects'        // This event corrects target
+    
+    // Contextual relationships
+    | 'relatedTo'       // General relationship
+    | 'partOf'          // This event is part of target
+    | 'contains'        // This event contains target
+    | 'precedes'        // This event happens before target
+    | 'follows';        // This event happens after target
+    
+  target: string;       // @id of target event
+  strength?: number;    // 0-1 relationship strength (defaults to source event confidence)
+  confidence?: number;  // 0-1 confidence in relationship (defaults to relationship evidence)
+  description?: string; // Optional explanation
+}
+
+// STRENGTH CALCULATION (Equally Simple)
+class StrengthCalculator {
+  // Default: inherit from source event confidence
+  calculateDefaultStrength(sourceEventConfidence: number): number {
+    return sourceEventConfidence;
+  }
+  
+  // With relationship-specific evidence adjustment
+  calculateStrength(
+    sourceEventConfidence: number,
+    relationshipEvidence?: keyof typeof EVIDENCE_FACTORS
+  ): number {
+    if (!relationshipEvidence) {
+      return sourceEventConfidence;
+    }
+    
+    const R = EVIDENCE_FACTORS[relationshipEvidence] ?? 1.0;
+    return Math.max(0, Math.min(1, sourceEventConfidence * R));
+  }
+  
+  // Helper to categorize strength values
+  getStrengthLabel(strength: number): 'weak' | 'moderate' | 'strong' {
+    if (strength >= 0.8) return 'strong';
+    if (strength >= 0.5) return 'moderate';
+    return 'weak';
+  }
+}
+
+// STRENGTH GUIDELINES:
+// ≥ 0.8: strong    - "direct causation", "official statement"
+// 0.5-0.8: moderate - "industry consensus", "multiple reports"
+// < 0.5: weak       - "speculation", "single rumor"
   
   metadata: EventMetadata;
   
@@ -143,10 +366,13 @@ interface EventMetadata {
   author: string;
   version: string;
   lastModified?: string;
+  datePublished?: string;  // ISO 8601
   
-  // Calculated fields (never set manually)
-  confidence?: number;     // 0-1, based on volatility
-  volatility?: number;     // 0-1, change frequency
+  // AUTO-CALCULATED fields (never set manually)
+  confidence?: number;     // 0-1, = (1-V) × E × S
+  volatility?: number;     // 0-1, from change history
+  evidenceScore?: number;  // 0-1, from certainty.evidence
+  sourceScore?: number;    // 0-1, from source.type
 }
 
 interface Source {
@@ -180,7 +406,7 @@ interface Commit {
 
 // Repository structure (supports full git-like operations)
 interface Repository {
-  // Content-addressed storage
+  // Content-addressed storage (by @id hash)
   objects: {
     events: { [hash: string]: Event };
     entities: { [hash: string]: EntityObject };
@@ -188,11 +414,11 @@ interface Repository {
     commits: { [hash: string]: Commit };
   };
   
-  // Version tracking for ALL object types
+  // Logical evolution tracking (by logicalId)
   history: {
-    events: { [eventId: string]: string[] };     // Event ID -> commit hashes
-    entities: { [entityId: string]: string[] };  // Entity ID -> commit hashes  
-    actions: { [actionId: string]: string[] };   // Action ID -> commit hashes
+    events: { [logicalId: string]: string[] };     // Logical Event ID -> @id hashes
+    entities: { [logicalId: string]: string[] };   // Logical Entity ID -> @id hashes  
+    actions: { [logicalId: string]: string[] };    // Logical Action ID -> @id hashes
   };
   
   // Git-like references
@@ -331,47 +557,79 @@ function createRepository(store: ObjectStore): Repository {
 }
 ```
 
-### 6. Confidence Calculation (REQUIRED)
+### 6. Confidence Calculation (EXTREMELY SIMPLE & TRANSPARENT)
 
 ```typescript
-// Confidence = 1 - Volatility (simple and intuitive)
+// EXTREME SIMPLICITY: confidence = (1 - V) × E × S
+// NO WEIGHTS, NO PARAMETERS, PURE MULTIPLICATION
+
+// Evidence factor mapping
+const EVIDENCE_FACTORS = {
+  'hearsay': 0.6,
+  'reported': 0.8, 
+  'confirmed': 1.0,
+  'verified': 1.0,
+  'official': 1.0
+} as const;
+
+// Source factor mapping  
+const SOURCE_FACTORS = {
+  'Social': 0.7,
+  'Corporate': 0.9,
+  'NewsAgency': 1.0,
+  'Government': 1.1,
+  'Academic': 1.0
+} as const;
+
 class ConfidenceCalculator {
-  // Track changes over time
-  calculateVolatility(eventId: string, changeHistory: EventChange[]): number {
+  // Calculate volatility from change history
+  calculateVolatility(changeHistory: EventChange[]): number {
     if (changeHistory.length < 2) return 0;
     
-    // Count changes per time window
+    // Count changes per day
     const changeRates = this.getChangeRatesByDay(changeHistory);
     
-    // Calculate standard deviation
+    // Standard deviation of change rates
     const stdDev = this.standardDeviation(changeRates);
     
-    // Normalize to 0-1
+    // Normalize to 0-1 (K=10 default threshold)
     return Math.min(stdDev / 10, 1);
   }
   
-  // Simple confidence based on volatility
-  calculateConfidence(volatility: number, sourceType: string): number {
-    // Base confidence
-    let confidence = 1 - volatility;
+  // CORE FORMULA: Transparent, no magic numbers
+  calculateConfidence(
+    volatility: number,           // 0-1 from change history
+    evidence: keyof typeof EVIDENCE_FACTORS,
+    sourceType: keyof typeof SOURCE_FACTORS
+  ): number {
+    const V = volatility;
+    const E = EVIDENCE_FACTORS[evidence] ?? 0.7;
+    const S = SOURCE_FACTORS[sourceType] ?? 1.0;
     
-    // Simple source adjustment
-    const sourceFactors = {
-      'NewsAgency': 1.0,
-      'Government': 1.1,
-      'Corporate': 0.9,
-      'Social': 0.7
-    };
-    
-    return confidence * (sourceFactors[sourceType] || 1.0);
+    // Pure multiplication - completely transparent
+    return Math.max(0, Math.min(1, (1 - V) * E * S));
+  }
+  
+  // Helper for getting evidence score
+  getEvidenceScore(evidence?: string): number {
+    return EVIDENCE_FACTORS[evidence as keyof typeof EVIDENCE_FACTORS] ?? 0.7;
+  }
+  
+  // Helper for getting source score
+  getSourceScore(sourceType?: string): number {
+    return SOURCE_FACTORS[sourceType as keyof typeof SOURCE_FACTORS] ?? 1.0;
   }
 }
 
-// NEVER manually set confidence values
-// ALWAYS calculate from change history
+// AUTO-CALCULATION: Never manually set confidence
+// Formula explanation:
+// - High volatility (frequent changes) → Low confidence
+// - Strong evidence (official sources) → High confidence  
+// - Authoritative sources (government) → High confidence
+// - Pure multiplication = fully explainable results
 ```
 
-### 7. Type Validation Rules (PHASE 2 - NOT NOW)
+### 5. Type Validation Rules (PHASE 2 - NOT NOW)
 
 ```typescript
 // ⚠️ DO NOT IMPLEMENT IN PHASE 1
@@ -390,7 +648,7 @@ class PatternObserver {
 // const validator = new TypeValidator();  // NOT YET
 ```
 
-### 5. File Structure (EXACT)
+### 6. File Structure (EXACT)
 ```
 VeritasChain/
 ├── .git-events/           # Data storage
@@ -407,11 +665,13 @@ VeritasChain/
 │   └── HEAD              # Current branch
 ├── src/
 │   ├── types/            # TypeScript definitions
-│   │   ├── core.ts      # Core types (DataType, etc.)
+│   │   ├── core.ts      # Core types (DataType, JSONSchema, etc.)
+│   │   ├── modifiers.ts # Standardized modifier enums
 │   │   ├── entity.ts    # Entity interfaces
 │   │   ├── action.ts    # Action interfaces
 │   │   ├── statement.ts # Statement types (SVO, LogicalClause)
 │   │   ├── event.ts     # Event interfaces
+│   │   ├── relationships.ts # EventRelationship types
 │   │   ├── commit.ts    # Commit interfaces
 │   │   └── index.ts     # Re-exports
 │   ├── core/
@@ -445,35 +705,61 @@ VeritasChain/
 # │   └── learner.ts       # ML-based pattern learning
 ```
 
-### 6. API Endpoints (MINIMAL)
+### 7. API Endpoints (Versioned & Consistent)
 ```
+# API Versioning: All endpoints prefixed with /v1/
+# Accept-Version: 1.0 header support for future compatibility
+
 # Object operations
-POST   /entities                  # Add entity to staging
-GET    /entities/:hash            # Get entity by hash
-GET    /entities/:id/history      # Get entity version history
+POST   /v1/entities                     # Add entity to staging
+GET    /v1/entities/:hash               # Get entity by @id hash
+GET    /v1/entities/logical/:id         # Get latest version by logicalId
+GET    /v1/entities/logical/:id/history # Get all versions by logicalId
 
-POST   /actions                   # Add action to staging
-GET    /actions/:hash             # Get action by hash
+POST   /v1/actions                      # Add action to staging  
+GET    /v1/actions/:hash                # Get action by @id hash
+GET    /v1/actions/logical/:id/history  # Get action version history
 
-POST   /events                    # Add event to staging
-GET    /events/:hash              # Get event by hash
+POST   /v1/events                       # Add event to staging
+GET    /v1/events/:hash                 # Get event by @id hash
+GET    /v1/events/logical/:id/history   # Get event version history
 
-# Repository operations
-POST   /commits                   # Create commit
-GET    /commits/:id               # Get specific commit
-GET    /branches                  # List branches
-POST   /branches                  # Create branch
-PUT    /branches/:name            # Switch branch
-POST   /branches/:name/merge      # Merge branch
-GET    /log                       # Get commit history
-GET    /diff                      # Compare branches
+# Repository operations (consistent naming)
+POST   /v1/commits                      # Create commit
+GET    /v1/commits/:hash                # Get specific commit
+GET    /v1/commits                      # List commits (?limit=10&since=hash)
 
-# Query operations
-GET    /query/timeline            # Query event timeline
-GET    /query/entities            # Search entities
+GET    /v1/branches                     # List branches  
+POST   /v1/branches                     # Create branch
+PUT    /v1/branches/:name/checkout      # Switch to branch
+POST   /v1/branches/:name/merge         # Merge branch
+
+# Comparison operations (unified naming)
+GET    /v1/compare/commits/:hash1...:hash2    # Compare two commits
+GET    /v1/compare/branches/:name1...:name2   # Compare two branches
+GET    /v1/compare/entities/:hash1...:hash2   # Compare entity versions
+
+# Query operations (with pagination & defaults)
+GET    /v1/query/timeline              # Query timeline (?limit=50&since&until)
+GET    /v1/query/entities              # Search entities (?type&q&limit=50)  
+GET    /v1/query/relationships         # Query relationships (?type&target&limit=50)
+
+# Health and metadata
+GET    /v1/health                      # API health check
+GET    /v1/metadata                    # Repository metadata
 ```
 
-### 7. Type Safety Requirements
+## API Design Principles
+1. **Versioning**: All endpoints use `/v1/` prefix for future compatibility
+2. **Consistent Naming**: All comparison operations under `/compare/`  
+3. **Dual Access**: Objects accessible by @id hash OR logicalId
+4. **Pagination**: Query endpoints support `?limit&since` parameters with defaults:
+   - **Default limit**: 50 items per request
+   - **Maximum limit**: 500 items per request  
+   - **Offset support**: `?since=hash` for cursor-based pagination
+5. **Clear Semantics**: `PUT /checkout` vs `POST /merge` for different operations
+
+### 8. Type Safety Requirements
 
 Always define types first:
 ```typescript
@@ -513,11 +799,13 @@ async function createEvent(headline, svo, metadata) {
 ## Example Implementation Pattern
 
 ```typescript
-// GOOD - Simple confidence based on volatility
-class SimpleConfidence {
-  calculate(changeHistory: Change[]): number {
-    const volatility = this.calculateVolatility(changeHistory);
-    return 1 - volatility;  // That's it!
+// GOOD - Transparent confidence calculation
+class VeritasConfidence {
+  calculate(volatility: number, evidence: string, sourceType: string): number {
+    const V = volatility;
+    const E = EVIDENCE_FACTORS[evidence] ?? 0.7;
+    const S = SOURCE_FACTORS[sourceType] ?? 1.0;
+    return (1 - V) * E * S;  // Completely transparent!
   }
 }
 
@@ -526,7 +814,7 @@ class ComplexConfidence {
   calculate(event: Event): number {
     const weight1 = 0.25;  // Where did these numbers come from?
     const weight2 = 0.20;  // Too subjective!
-    // NO! Too complex
+    // NO! Too complex, no magic weights
   }
 }
 ```
@@ -543,7 +831,7 @@ class ComplexConfidence {
 
 1. **NO EXTERNAL DATABASES** - Use only the file system
 2. **NO STREAMING** - Simple request/response only
-3. **CONFIDENCE = 1 - VOLATILITY** - Simple formula, no complex weights
+3. **CONFIDENCE = (1 - V) × E × S** - Single transparent formula, no weights
 4. **NO TYPE VALIDATION YET** - Just observe patterns in Phase 1
 5. **USE OPTIONAL TYPES** - Don't force entity/verb types early
 6. **TRACK CHANGES** - Every modification affects volatility
@@ -558,7 +846,7 @@ Remember: This is a foundation for a decentralized system. Every decision should
 ## Phase 1 Focus
 
 1. **Core Git operations** - init, add, commit, branch, merge
-2. **Simple confidence** - Based only on change frequency
+2. **Confidence calculation** - (1 - V) × E × S formula only
 3. **Pattern observation** - Record what we see, don't validate
 4. **Clean architecture** - Interfaces and adapters for future flexibility
 
