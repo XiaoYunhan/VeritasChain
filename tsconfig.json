@@ -10,7 +10,7 @@
     "isolatedModules": true,
     "declaration": true,
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": "./",
     
     // CRITICAL: TypeScript strict mode - no 'any' allowed
     "strict": true,
@@ -31,13 +31,11 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "tests/**/*"
   ],
   "exclude": [
     "node_modules",
-    "dist",
-    "**/*.test.ts",
-    "src/adapters/**/*",
-    "src/repository/**/*"
+    "dist"
   ]
 }

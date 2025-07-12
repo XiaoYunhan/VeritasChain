@@ -571,7 +571,82 @@ npm run lint      # Type checking
 npm test -- --watch  # Continuous testing
 ```
 
-See [SAMPLE.md](./SAMPLE.md) for real-world examples of the event specification.
+## Testing
+
+### Test Architecture
+```
+tests/
+├── sample-runner.js     # Executable test suite (18 test cases)
+└── output/              # Test results directory
+    ├── test-results.json    # Structured parsed events + test results
+    └── test-summary.txt     # Human-readable overview
+```
+
+### Running Tests
+```bash
+# Full test suite with detailed output
+npm test
+
+# Quick compilation verification only
+npm run test:quick
+```
+
+### Test Coverage
+- **News Events** (9 examples): JPMorgan fees, US-India trade, Kraft Heinz restructuring, etc.
+- **Legal Clauses** (2 examples): Singapore paternity leave, contract delivery clause
+- **Complex Logic** (4 examples): NOT, BEFORE, nested IMPLIES, GT/LT operators
+- **Core Functions** (5 tests): Hashing, confidence calculation, relationships, logical operators
+
+### How News Text Becomes Structured Events
+
+The test suite demonstrates how raw news text is parsed into our structured format:
+
+**Original News:**
+> "JPMorgan Chase & Co. has told financial-technology companies that it will start charging fees amounting to hundreds of millions of dollars for access to their customers' bank account information – a move that threatens to upend the industry's business models."
+
+**Parsed Structure (in test-results.json):**
+```json
+{
+  "@type": "Event",
+  "kind": "fact",
+  "title": "JPMorgan Charges Fintechs for Data Access",
+  "statement": {
+    "type": "SVO",
+    "subjectRef": "sha256:e5f6789abc...",  // -> JPMorgan entity
+    "verbRef": "sha256:f6789abc345...",    // -> "charges" action
+    "objectRef": "sha256:789abc456d..."    // -> Fintechs entity
+  },
+  "modifiers": {
+    "temporal": { "when": "future", "tense": "will" },
+    "degree": { "amount": "hundreds of millions USD" },
+    "purpose": { "reason": "customer data access fees" }
+  },
+  "relationships": [{
+    "type": "threatens",
+    "target": "sha256:abc456789de...",
+    "description": "May upend industry business models"
+  }],
+  "metadata": {
+    "confidence": 0.9,  // Auto-calculated: (1-V)×E×S
+    "source": { "type": "NewsAgency", "name": "Financial Times" }
+  }
+}
+```
+
+### Test Output Files
+
+**test-results.json** contains:
+- Full parsed event structures showing how text becomes data
+- Test execution details (pass/fail, duration)
+- Confidence calculations with formulas
+- Relationship validations
+
+**test-summary.txt** contains:
+- Test execution overview (18 tests, 100% pass rate)
+- Category breakdown (news, legal, logic, core)
+- Performance metrics
+
+See [SAMPLE.md](./SAMPLE.md) for complete examples of all supported event types.
 
 ## License
 

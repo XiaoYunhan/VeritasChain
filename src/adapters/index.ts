@@ -17,14 +17,16 @@ export type {
   StorageConfig,
   StorageFactory
 } from './interfaces.js';
+import type { StorageConfig, StorageAdapter } from './interfaces.js';
 
 // Local file system implementation
 export {
   LocalStorageAdapter
 } from './local.js';
+import { LocalStorageAdapter } from './local.js';
 
 // Factory function for creating storage adapters
-export function createStorageAdapter(config: any): any {
+export function createStorageAdapter(config: StorageConfig): StorageAdapter {
   switch (config.type) {
     case 'local':
       return new LocalStorageAdapter(config);
@@ -36,6 +38,6 @@ export function createStorageAdapter(config: any): any {
       throw new Error('Hybrid storage not implemented yet (Phase 4)');
     
     default:
-      throw new Error(`Unsupported storage type: ${(config as any).type}`);
+      throw new Error(`Unsupported storage type: ${config.type}`);
   }
 }

@@ -18,6 +18,7 @@ import type {
   CertaintyModifier, 
   LegalModifier 
 } from '../types/modifiers.js';
+import type { ConfidenceCalculation } from '../types/confidence.js';
 import type { EventChange } from '../types/confidence.js';
 import type { StorageAdapter } from '../adapters/interfaces.js';
 import { calculateEventHash } from '../core/hash.js';
@@ -363,7 +364,7 @@ export class EventRepository {
   async recalculateConfidence(logicalId: string): Promise<{
     currentConfidence: number;
     recalculatedConfidence: number;
-    factors: any;
+    factors: ConfidenceCalculation;
   }> {
     const event = await this.getLatestEvent(logicalId);
     if (!event) {
