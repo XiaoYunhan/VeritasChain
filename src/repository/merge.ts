@@ -19,6 +19,8 @@ import type {
   EntityObject,
   ActionObject,
   Event,
+  MacroEvent,
+  ComponentRef,
   Statement
 } from '../types/index.js';
 import { calculateCommitHash, calculateTreeHash } from '../core/hash.js';
@@ -37,12 +39,14 @@ export type ConflictType =
   | 'relationship'   // Conflicting relationships between objects
   | 'statement'      // Conflicting logical statements
   | 'metadata'       // Metadata conflicts (confidence, etc.)
-  | 'version';       // Version numbering conflicts
+  | 'version'        // Version numbering conflicts
+  | 'component'      // MacroEvent component conflicts
+  | 'aggregation';   // MacroEvent aggregation logic conflicts
 
 export interface MergeConflict {
   type: ConflictType;
   logicalId: string;      // Logical ID of conflicting object
-  objectType: 'entity' | 'action' | 'event';
+  objectType: 'entity' | 'action' | 'event' | 'macroEvent';
   property?: string;      // Specific property in conflict
   
   // Three-way conflict values
@@ -311,7 +315,8 @@ export class MergeManager {
     const changes = {
       entities: new Map<string, { base?: string; ours?: string; theirs?: string }>(),
       actions: new Map<string, { base?: string; ours?: string; theirs?: string }>(),
-      events: new Map<string, { base?: string; ours?: string; theirs?: string }>()
+      events: new Map<string, { base?: string; ours?: string; theirs?: string }>(),
+      macroEvents: new Map<string, { base?: string; ours?: string; theirs?: string }>()
     };
 
     // Collect all logical IDs from all trees
@@ -330,6 +335,11 @@ export class MergeManager {
         ...Object.keys(baseTree.entries.events),
         ...Object.keys(ourTree.entries.events),
         ...Object.keys(theirTree.entries.events)
+      ]),
+      macroEvents: new Set([
+        ...Object.keys(baseTree.entries.macroEvents || {}),
+        ...Object.keys(ourTree.entries.macroEvents || {}),
+        ...Object.keys(theirTree.entries.macroEvents || {})
       ])
     };
 
@@ -355,6 +365,14 @@ export class MergeManager {
         base: baseTree.entries.events[logicalId],
         ours: ourTree.entries.events[logicalId],
         theirs: theirTree.entries.events[logicalId]
+      });
+    }
+
+    for (const logicalId of allLogicalIds.macroEvents) {
+      changes.macroEvents.set(logicalId, {
+        base: baseTree.entries.macroEvents?.[logicalId],
+        ours: ourTree.entries.macroEvents?.[logicalId],
+        theirs: theirTree.entries.macroEvents?.[logicalId]
       });
     }
 
@@ -386,6 +404,12 @@ export class MergeManager {
     for (const [logicalId, versions] of mergeContext.events) {
       const eventConflicts = await this.detectEventConflicts(logicalId, versions);
       conflicts.push(...eventConflicts);
+    }
+
+    // Check MacroEvent conflicts
+    for (const [logicalId, versions] of mergeContext.macroEvents) {
+      const macroEventConflicts = await this.detectMacroEventConflicts(logicalId, versions);
+      conflicts.push(...macroEventConflicts);
     }
 
     return conflicts;
@@ -556,6 +580,259 @@ export class MergeManager {
   }
 
   /**
+   * Detect conflicts in MacroEvent objects
+   */
+  private async detectMacroEventConflicts(
+    logicalId: string,
+    versions: { base?: string; ours?: string; theirs?: string }
+  ): Promise<MergeConflict[]> {
+    const conflicts: MergeConflict[] = [];
+
+    // If only one side changed, no conflict
+    if (!versions.ours || !versions.theirs) {
+      return conflicts;
+    }
+
+    // If both sides have same hash, no conflict
+    if (versions.ours === versions.theirs) {
+      return conflicts;
+    }
+
+    // Load MacroEvent objects for comparison
+    const [baseMacroEvent, ourMacroEvent, theirMacroEvent] = await Promise.all([
+      versions.base ? this.storage.macroEvents.retrieve(versions.base) : null,
+      this.storage.macroEvents.retrieve(versions.ours),
+      this.storage.macroEvents.retrieve(versions.theirs)
+    ]);
+
+    if (!ourMacroEvent || !theirMacroEvent) {
+      return conflicts; // Cannot compare if objects don't exist
+    }
+
+    // Compare MacroEvent-specific properties
+    const macroEventConflicts = this.compareMacroEventProperties(
+      logicalId,
+      baseMacroEvent,
+      ourMacroEvent,
+      theirMacroEvent
+    );
+    
+    conflicts.push(...macroEventConflicts);
+
+    return conflicts;
+  }
+
+  /**
+   * Compare MacroEvent properties to detect conflicts
+   */
+  private compareMacroEventProperties(
+    logicalId: string,
+    base: MacroEvent | null,
+    ours: MacroEvent,
+    theirs: MacroEvent
+  ): MergeConflict[] {
+    const conflicts: MergeConflict[] = [];
+
+    // Check aggregation logic conflicts (critical)
+    if (ours.aggregation !== theirs.aggregation) {
+      conflicts.push({
+        type: 'aggregation',
+        logicalId,
+        objectType: 'macroEvent',
+        property: 'aggregation',
+        base: base?.aggregation,
+        ours: ours.aggregation,
+        theirs: theirs.aggregation,
+        description: `Aggregation logic conflict: ${ours.aggregation} vs ${theirs.aggregation}`,
+        severity: 'critical',
+        autoResolvable: false,
+        suggestedResolution: 'manual',
+        resolutionReason: 'Aggregation logic changes affect confidence calculation'
+      });
+    }
+
+    // Check component reference conflicts
+    const componentConflicts = this.compareComponentReferences(
+      logicalId,
+      base?.components || [],
+      ours.components,
+      theirs.components
+    );
+    conflicts.push(...componentConflicts);
+
+    // Check timeline span conflicts
+    if (ours.timelineSpan && theirs.timelineSpan) {
+      if (JSON.stringify(ours.timelineSpan) !== JSON.stringify(theirs.timelineSpan)) {
+        conflicts.push({
+          type: 'content',
+          logicalId,
+          objectType: 'macroEvent',
+          property: 'timelineSpan',
+          base: base?.timelineSpan,
+          ours: ours.timelineSpan,
+          theirs: theirs.timelineSpan,
+          description: `Timeline span conflict for MacroEvent ${logicalId}`,
+          severity: 'medium',
+          autoResolvable: true,
+          suggestedResolution: 'merge',
+          resolutionReason: 'Timeline spans can be merged using union of start/end dates'
+        });
+      }
+    }
+
+    // Check custom rule conflicts
+    if (ours.customRuleId !== theirs.customRuleId) {
+      conflicts.push({
+        type: 'content',
+        logicalId,
+        objectType: 'macroEvent',
+        property: 'customRuleId',
+        base: base?.customRuleId,
+        ours: ours.customRuleId,
+        theirs: theirs.customRuleId,
+        description: `Custom rule conflict: ${ours.customRuleId} vs ${theirs.customRuleId}`,
+        severity: 'high',
+        autoResolvable: false,
+        suggestedResolution: 'manual',
+        resolutionReason: 'Custom rules affect validation logic'
+      });
+    }
+
+    // Check importance level conflicts
+    if (ours.importance !== theirs.importance) {
+      conflicts.push({
+        type: 'metadata',
+        logicalId,
+        objectType: 'macroEvent',
+        property: 'importance',
+        base: base?.importance,
+        ours: ours.importance,
+        theirs: theirs.importance,
+        description: `Importance level conflict: ${ours.importance} vs ${theirs.importance}`,
+        severity: 'low',
+        autoResolvable: true,
+        suggestedResolution: 'ours', // Default to higher importance
+        resolutionReason: 'Importance levels can be resolved by taking the higher value'
+      });
+    }
+
+    return conflicts;
+  }
+
+  /**
+   * Compare component references for conflicts
+   */
+  private compareComponentReferences(
+    logicalId: string,
+    base: ComponentRef[],
+    ours: ComponentRef[],
+    theirs: ComponentRef[]
+  ): MergeConflict[] {
+    const conflicts: MergeConflict[] = [];
+
+    // Create maps for easy comparison
+    const baseMap = new Map(base.map(c => [c.logicalId, c]));
+    const oursMap = new Map(ours.map(c => [c.logicalId, c]));
+    const theirsMap = new Map(theirs.map(c => [c.logicalId, c]));
+
+    // Get all component logical IDs
+    const allComponentIds = new Set([
+      ...baseMap.keys(),
+      ...oursMap.keys(),
+      ...theirsMap.keys()
+    ]);
+
+    for (const componentId of allComponentIds) {
+      const baseComponent = baseMap.get(componentId);
+      const ourComponent = oursMap.get(componentId);
+      const theirComponent = theirsMap.get(componentId);
+
+      // Check for component addition/removal conflicts
+      if (ourComponent && theirComponent) {
+        // Both sides have the component - check for version conflicts
+        if (JSON.stringify(ourComponent) !== JSON.stringify(theirComponent)) {
+          conflicts.push({
+            type: 'component',
+            logicalId,
+            objectType: 'macroEvent',
+            property: `components[${componentId}]`,
+            base: baseComponent,
+            ours: ourComponent,
+            theirs: theirComponent,
+            description: `Component reference conflict for ${componentId}`,
+            severity: 'medium',
+            autoResolvable: this.canAutoResolveComponentRef(ourComponent, theirComponent),
+            suggestedResolution: this.suggestComponentRefResolution(ourComponent, theirComponent),
+            resolutionReason: 'Component references can be resolved based on version preference'
+          });
+        }
+      } else if (ourComponent && !theirComponent && baseComponent) {
+        // We removed component, they kept it
+        conflicts.push({
+          type: 'component',
+          logicalId,
+          objectType: 'macroEvent',
+          property: `components[${componentId}]`,
+          base: baseComponent,
+          ours: undefined,
+          theirs: undefined, // They implicitly kept base version
+          description: `Component removal conflict for ${componentId}`,
+          severity: 'medium',
+          autoResolvable: false,
+          suggestedResolution: 'manual'
+        });
+      } else if (!ourComponent && theirComponent && baseComponent) {
+        // They removed component, we kept it
+        conflicts.push({
+          type: 'component',
+          logicalId,
+          objectType: 'macroEvent',
+          property: `components[${componentId}]`,
+          base: baseComponent,
+          ours: undefined, // We implicitly kept base version
+          theirs: undefined,
+          description: `Component removal conflict for ${componentId}`,
+          severity: 'medium',
+          autoResolvable: false,
+          suggestedResolution: 'manual'
+        });
+      }
+    }
+
+    return conflicts;
+  }
+
+  /**
+   * Determine if component reference conflict can be auto-resolved
+   */
+  private canAutoResolveComponentRef(ours: ComponentRef, theirs: ComponentRef): boolean {
+    // Auto-resolve if only version differs and one is using latest
+    if (ours.logicalId === theirs.logicalId) {
+      // If one side uses latest (no version) and other uses specific version, prefer latest
+      if (!ours.version && theirs.version) return true;
+      if (ours.version && !theirs.version) return true;
+      
+      // If both use versions, cannot auto-resolve
+      return false;
+    }
+    
+    return false;
+  }
+
+  /**
+   * Suggest resolution for component reference conflicts
+   */
+  private suggestComponentRefResolution(ours: ComponentRef, theirs: ComponentRef): 'ours' | 'theirs' | 'merge' | 'manual' {
+    if (ours.logicalId === theirs.logicalId) {
+      // Same component, different versions
+      if (!ours.version && theirs.version) return 'ours'; // Prefer latest
+      if (ours.version && !theirs.version) return 'theirs'; // Prefer latest
+    }
+    
+    return 'manual';
+  }
+
+  /**
    * Attempt to resolve conflicts automatically
    */
   private async resolveConflicts(
@@ -574,16 +851,49 @@ export class MergeManager {
             conflict.autoResolvable = true;
             break;
           case 'merge':
-            // Attempt intelligent merging (e.g., for descriptions)
-            if (conflict.type === 'content' && conflict.property === 'description') {
-              conflict.autoResolvable = true;
-            }
+            // Attempt intelligent merging based on conflict type
+            conflict.autoResolvable = await this.attemptIntelligentMerge(conflict);
             break;
         }
       }
     }
 
     return conflicts;
+  }
+
+  /**
+   * Attempt intelligent auto-merge for specific conflict types
+   */
+  private async attemptIntelligentMerge(conflict: MergeConflict): Promise<boolean> {
+    switch (conflict.type) {
+      case 'content':
+        // Description merging
+        if (conflict.property === 'description') {
+          return true; // Can merge descriptions
+        }
+        // Timeline span merging for MacroEvents
+        if (conflict.property === 'timelineSpan' && conflict.objectType === 'macroEvent') {
+          return true; // Can merge timeline spans using union
+        }
+        break;
+        
+      case 'metadata':
+        // Importance level resolution for MacroEvents
+        if (conflict.property === 'importance' && conflict.objectType === 'macroEvent') {
+          return true; // Can resolve by taking higher importance
+        }
+        break;
+        
+      case 'component':
+        // Component reference resolution for MacroEvents
+        if (conflict.objectType === 'macroEvent') {
+          // Check if we can auto-resolve based on version preferences
+          return this.canAutoResolveComponentRef(conflict.ours as ComponentRef, conflict.theirs as ComponentRef);
+        }
+        break;
+    }
+    
+    return false;
   }
 
   /**
@@ -598,7 +908,8 @@ export class MergeManager {
     const mergedEntries = {
       entities: {} as Record<string, string>,
       actions: {} as Record<string, string>,
-      events: {} as Record<string, string>
+      events: {} as Record<string, string>,
+      macroEvents: {} as Record<string, string>
     };
 
     // Merge entities
@@ -622,6 +933,14 @@ export class MergeManager {
       const resolvedVersion = this.resolveVersion(logicalId, versions, conflicts, 'event');
       if (resolvedVersion) {
         mergedEntries.events[logicalId] = resolvedVersion;
+      }
+    }
+
+    // Merge MacroEvents
+    for (const [logicalId, versions] of mergeContext.macroEvents) {
+      const resolvedVersion = this.resolveVersion(logicalId, versions, conflicts, 'macroEvent');
+      if (resolvedVersion) {
+        mergedEntries.macroEvents[logicalId] = resolvedVersion;
       }
     }
 

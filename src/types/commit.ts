@@ -40,9 +40,10 @@ export interface Tree {
   
   // Tree entries - content-addressed references
   entries: {
-    events: Record<string, string>;    // logicalId -> current @id
-    entities: Record<string, string>;  // logicalId -> current @id
-    actions: Record<string, string>;   // logicalId -> current @id
+    events: Record<string, string>;      // logicalId -> current @id
+    entities: Record<string, string>;    // logicalId -> current @id
+    actions: Record<string, string>;     // logicalId -> current @id
+    macroEvents?: Record<string, string>; // logicalId -> current @id (Phase 2)
   };
   
   // Tree metadata

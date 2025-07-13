@@ -12,6 +12,8 @@ tests/integration/
 │   └── branches.test.js      # Branch management (Phase 2.1)
 ├── merge/
 │   └── merge.test.js         # Three-way merge (Phase 2.2)
+├── macro-merge/
+│   └── macro-merge.test.js   # MacroEvent merge (Phase 2.9)
 └── README.md
 ```
 
@@ -22,6 +24,7 @@ tests/integration/
 npm run test:api        # Test HTTP API endpoints
 npm run test:branches   # Test branch management
 npm run test:merge      # Test merge operations
+npm run test:macro-merge # Test MacroEvent merge operations
 ```
 
 ### Combined Phase 2 Tests
@@ -41,6 +44,7 @@ To avoid conflicts, each test suite uses different ports:
 - **API Tests**: Port 3001
 - **Branch Tests**: Port 3002  
 - **Merge Tests**: Port 3003
+- **MacroEvent Merge Tests**: Port 3004
 
 ## Test Features
 
@@ -67,6 +71,15 @@ To avoid conflicts, each test suite uses different ports:
 - Conflict detection
 - Multiple merge strategies
 - Error handling
+
+### ✅ MacroEvent Merge Tests (8 tests)
+- MacroEvent test data setup
+- Conflicting MacroEvent branches
+- Aggregation logic conflicts
+- Component reference conflicts
+- Timeline span auto-merge
+- Importance level resolution
+- MacroEvent merge strategies
 
 ## CI/CD Integration
 

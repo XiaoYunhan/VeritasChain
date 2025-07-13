@@ -31,6 +31,7 @@ export interface Tree {
         events: Record<string, string>;
         entities: Record<string, string>;
         actions: Record<string, string>;
+        macroEvents?: Record<string, string>;
     };
     timestamp: string;
     parentTree?: string;
