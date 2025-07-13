@@ -24,6 +24,17 @@ export interface EntityObject {
     description?: string;
   };
   
+  // PHASE 2: Enhanced entity resolution and external linking
+  aliases?: string[];  // Synonym names for entity resolution
+  identifiers?: {      // Industry-standard identifiers
+    isin?: string;     // International Securities Identification Number
+    lei?: string;      // Legal Entity Identifier
+    ticker?: string;   // Stock ticker symbol
+    ein?: string;      // Employer Identification Number
+    duns?: string;     // Dun & Bradstreet Number
+    [key: string]: string | undefined; // Extensible for other ID types
+  };
+  
   // Arbitrary properties (JSON object)
   properties?: Record<string, unknown>;
 }
@@ -43,6 +54,10 @@ export interface ActionObject {
   label: string;      // Human-readable verb
   description?: string;
   category?: string;  // PHASE 1: Optional categorization
+  
+  // PHASE 2: Verb semantic properties for validation
+  valency?: 'intransitive' | 'transitive' | 'ditransitive'; // Argument structure
+  inverseVerbRef?: string;  // @id of inverse verb (e.g., "owns" ↔ "ownedBy")
   
   // PHASE 1: Deontic actions for legal clauses (kind='norm')
   deonticType?: 'shall' | 'may' | 'must-not' | 'liable-for' | 'entitled-to' | 'should' | 'permitted' | 'prohibited';

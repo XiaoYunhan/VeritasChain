@@ -8,7 +8,7 @@
  */
 
 import type { SVO } from '../types/statement.js';
-import type { EventRelationship } from '../types/event.js';
+import type { EventRelationship, MacroEvent } from '../types/event.js';
 
 export interface ObservedPattern {
   pattern: string;
@@ -30,6 +30,8 @@ export class PatternObserver {
   private relationshipPatterns = new Map<string, ObservedPattern>();
   private entityTypePatterns = new Map<string, ObservedPattern>();
   private actionCategoryPatterns = new Map<string, ObservedPattern>();
+  private macroPatterns = new Map<string, ObservedPattern>();
+  private statementPatterns = new Map<string, ObservedPattern>();
   
   /**
    * Observe an SVO pattern
@@ -72,6 +74,24 @@ export class PatternObserver {
   }
   
   /**
+   * PHASE 2: Observe MacroEvent patterns
+   * Records aggregation patterns and statement types for composite events
+   */
+  observeMacroEvent(macroEvent: MacroEvent): void {
+    // Record aggregation patterns without validation
+    const aggregationKey = `${macroEvent.aggregation || 'NONE'}-${macroEvent.components.length}`;
+    this.recordPattern(this.macroPatterns, aggregationKey, macroEvent['@id']);
+    
+    // Also record statement type patterns
+    const stmtKey = `macro-${macroEvent.statement.type}`;
+    this.recordPattern(this.statementPatterns, stmtKey, macroEvent['@id']);
+    
+    // Record component count distribution
+    const componentCountKey = `components-${macroEvent.components.length}`;
+    this.recordPattern(this.macroPatterns, componentCountKey, macroEvent['@id']);
+  }
+  
+  /**
    * Get pattern statistics for analysis
    */
   getStatistics(): PatternStatistics {
@@ -79,7 +99,9 @@ export class PatternObserver {
       ...this.svoPatterns.values(),
       ...this.relationshipPatterns.values(),
       ...this.entityTypePatterns.values(),
-      ...this.actionCategoryPatterns.values()
+      ...this.actionCategoryPatterns.values(),
+      ...this.macroPatterns.values(),
+      ...this.statementPatterns.values()
     ];
     
     const sortedByCount = [...allPatterns].sort((a, b) => b.count - a.count);
@@ -103,12 +125,16 @@ export class PatternObserver {
     relationships: Record<string, ObservedPattern>;
     entityTypes: Record<string, ObservedPattern>;
     actionCategories: Record<string, ObservedPattern>;
+    macro: Record<string, ObservedPattern>;
+    statements: Record<string, ObservedPattern>;
   } {
     return {
       svo: Object.fromEntries(this.svoPatterns),
       relationships: Object.fromEntries(this.relationshipPatterns),
       entityTypes: Object.fromEntries(this.entityTypePatterns),
-      actionCategories: Object.fromEntries(this.actionCategoryPatterns)
+      actionCategories: Object.fromEntries(this.actionCategoryPatterns),
+      macro: Object.fromEntries(this.macroPatterns),
+      statements: Object.fromEntries(this.statementPatterns)
     };
   }
   

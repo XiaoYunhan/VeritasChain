@@ -5,7 +5,7 @@
  * and normative clauses (legal) with unified logical reasoning.
  */
 
-import type { Statement } from './statement.js';
+import type { Statement, LogicalClause } from './statement.js';
 import type { 
   TemporalModifier, 
   SpatialModifier, 
@@ -117,4 +117,59 @@ export interface Event {
   
   // Event metadata and provenance
   metadata: EventMetadata;
+}
+
+/**
+ * Component reference supporting both logical ID (latest) and version-specific modes
+ */
+export interface ComponentRef {
+  logicalId: string;      // Always required - groups event versions
+  version?: string;       // Optional - if specified, pins to specific version
+                         // If omitted, always resolves to latest version
+}
+
+/**
+ * Validation matrix entry for pre-merge conflict detection
+ */
+export interface AggregationConstraint {
+  logic: 'AND' | 'OR' | 'SEQUENCE' | 'CUSTOM';
+  requirements: string[];           // Must satisfy conditions
+  conflicts: string[];             // Typical conflict patterns
+  validationFn?: (components: Event[], macro: MacroEvent) => boolean;
+}
+
+/**
+ * PHASE 2: Composite Event (L2) - MacroEvent
+ * 
+ * Represents a higher-level narrative composed of multiple atomic events.
+ * Supports aggregation logic for confidence calculation and complex
+ * logical relationships between component events.
+ */
+export interface MacroEvent extends Omit<Event, "@type"> {
+  "@type": "MacroEvent";  // Discriminator for composite events
+  
+  // Components - flexible references supporting version control
+  components: ComponentRef[];   // Array of component references
+  
+  // Aggregation logic for confidence calculation  
+  aggregation?: 'AND' | 'OR' | 'ORDERED_ALL' | 'CUSTOM'; // Renamed for clarity
+  
+  // Timeline span for UI visualization
+  timelineSpan?: {
+    start: string;  // ISO 8601
+    end: string;    // ISO 8601
+  };
+  
+  // Custom aggregation rule (for CUSTOM logic)
+  customRuleId?: string;  // Reference to validation script
+  
+  // Human-readable summary of the composite event
+  summary?: string;
+  
+  // Enhanced labels and importance for filtering
+  labels?: string[];      // Subject tags  
+  importance?: 1 | 2 | 3 | 4 | 5;  // Priority dimension separate from confidence
+  
+  // The statement must be a LogicalClause for composite events
+  statement: LogicalClause;  // Cannot be simple SVO
 }
