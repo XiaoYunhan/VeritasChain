@@ -407,6 +407,58 @@ interface Source {
   // PHASE 1: Legal source hierarchy for kind='norm'
   legalType?: 'constitution' | 'statute' | 'regulation' | 'case-law' | 'contract' | 'policy';
 }
+
+// PHASE 2: Composite Event (L2) - MacroEvent
+interface MacroEvent extends Event {
+  "@type": "MacroEvent";  // Discriminator for composite events
+  
+  // Components - direct references to sub-events
+  components: string[];   // Array of Event @id hashes
+  
+  // Aggregation logic for confidence calculation
+  aggregationLogic?: 'AND' | 'OR' | 'SEQUENCE' | 'CUSTOM';
+  
+  // Human-readable summary of the composite event
+  summary?: string;
+  
+  // The statement must be a LogicalClause for composite events
+  statement: LogicalClause;  // Cannot be simple SVO
+}
+
+// Example MacroEvent:
+/*
+{
+  "@type": "MacroEvent",
+  "@id": "sha256:composite123...",
+  "logicalId": "acquisition-process-001",
+  "version": "1.0",
+  "title": "Tech Corp Complete Acquisition of StartupAI",
+  "statement": {
+    "type": "SEQUENCE",
+    "operands": [
+      { "type": "SVO", "subjectRef": "tech-corp", "verbRef": "investigates", "objectRef": "startupai" },
+      { "type": "SVO", "subjectRef": "board", "verbRef": "approves", "objectRef": "deal" },
+      { "type": "SVO", "subjectRef": "tech-corp", "verbRef": "acquires", "objectRef": "startupai" }
+    ]
+  },
+  "components": [
+    "sha256:due-diligence-event...",
+    "sha256:board-approval-event...",
+    "sha256:acquisition-closing-event..."
+  ],
+  "aggregation": "ORDERED_ALL",
+  "summary": "Multi-step acquisition from due diligence through board approval to closing",
+  "modifiers": {
+    "temporal": { "duration": "P30D" },  // 30-day process
+    "degree": { "scale": "large", "amount": "$10B" }
+  }
+}
+
+// Confidence calculation for MacroEvent:
+// - AND/ORDERED_ALL: C_macro = min(C1, C2, ..., Cn)  // Weakest link
+// - OR: C_macro = max(C1, C2, ..., Cn)              // Strongest evidence
+// - CUSTOM: User-defined aggregation function
+*/
 ```
 
 #### Commit Structure
@@ -439,6 +491,7 @@ interface Repository {
     entities: { [hash: string]: EntityObject };
     actions: { [hash: string]: ActionObject };
     commits: { [hash: string]: Commit };
+    macroEvents?: { [hash: string]: MacroEvent };  // PHASE 2: Composite events
   };
   
   // Logical evolution tracking (by logicalId)
@@ -446,6 +499,7 @@ interface Repository {
     events: { [logicalId: string]: string[] };     // Logical Event ID -> @id hashes
     entities: { [logicalId: string]: string[] };   // Logical Entity ID -> @id hashes  
     actions: { [logicalId: string]: string[] };    // Logical Action ID -> @id hashes
+    macroEvents?: { [logicalId: string]: string[] }; // PHASE 2: MacroEvent versions
   };
   
   // Git-like references
@@ -517,6 +571,11 @@ interface ObjectStore {
   addEvent(event: Event): Promise<string>;
   getEvent(hash: string): Promise<Event | null>;
   getEventHistory(eventId: string): Promise<string[]>;
+  
+  // PHASE 2: MacroEvent operations
+  addMacroEvent?(macroEvent: MacroEvent): Promise<string>;
+  getMacroEvent?(hash: string): Promise<MacroEvent | null>;
+  getMacroEventHistory?(macroEventId: string): Promise<string[]>;
   
   // Commit operations
   commit(message: string, changes: Commit['changes']): Promise<Commit>;
@@ -671,6 +730,46 @@ class ConfidenceCalculator {
   getSourceScore(sourceType?: string): number {
     return SOURCE_FACTORS[sourceType as keyof typeof SOURCE_FACTORS] ?? 1.0;
   }
+  
+  // PHASE 2: Aggregate confidence for MacroEvents
+  aggregateConfidence(
+    componentConfidences: number[],
+    aggregationLogic: 'AND' | 'OR' | 'SEQUENCE' | 'CUSTOM',
+    customAggregator?: (confidences: number[]) => number
+  ): number {
+    if (componentConfidences.length === 0) return 0;
+    
+    switch (aggregationLogic) {
+      case 'AND':
+      case 'SEQUENCE':
+        // Weakest link principle - all components must be reliable
+        return Math.min(...componentConfidences);
+        
+      case 'OR':
+        // Strongest evidence principle - any reliable component suffices
+        return Math.max(...componentConfidences);
+        
+      case 'CUSTOM':
+        if (!customAggregator) {
+          throw new Error('Custom aggregator function required for CUSTOM logic');
+        }
+        return Math.max(0, Math.min(1, customAggregator(componentConfidences)));
+        
+      default:
+        // Default to average (should not reach here)
+        const sum = componentConfidences.reduce((a, b) => a + b, 0);
+        return sum / componentConfidences.length;
+    }
+  }
+  
+  // Example usage for MacroEvent:
+  // const childConfidences = await Promise.all(
+  //   macroEvent.components.map(id => getEventConfidence(id))
+  // );
+  // const macroConfidence = calculator.aggregateConfidence(
+  //   childConfidences,
+  //   macroEvent.aggregationLogic || 'AND'
+  // );
 }
 
 // AUTO-CALCULATION: Never manually set confidence
@@ -693,6 +792,17 @@ class PatternObserver {
     // Only record, no validation
     const pattern = `${svo.subject.label}-${svo.verb.id}-${svo.object.label}`;
     this.patterns.set(pattern, (this.patterns.get(pattern) || 0) + 1);
+  }
+  
+  // PHASE 2: Observe MacroEvent patterns
+  observeMacroEvent(macroEvent: MacroEvent): void {
+    // Record aggregation patterns without validation
+    const key = `${macroEvent.aggregationLogic}-${macroEvent.components.length}`;
+    this.macroPatterns.set(key, (this.macroPatterns.get(key) || 0) + 1);
+    
+    // Also record statement type patterns
+    const stmtKey = `macro-${macroEvent.statement.type}`;
+    this.statementPatterns.set(stmtKey, (this.statementPatterns.get(stmtKey) || 0) + 1);
   }
 }
 
@@ -771,6 +881,12 @@ POST   /v1/events                       # Add event to staging
 GET    /v1/events/:hash                 # Get event by @id hash
 GET    /v1/events/logical/:id/history   # Get event version history
 
+# PHASE 2: MacroEvent operations
+POST   /v1/macro-events                 # Add MacroEvent to staging
+GET    /v1/macro-events/:hash           # Get MacroEvent by @id hash
+GET    /v1/macro-events/logical/:id     # Get latest MacroEvent version
+GET    /v1/macro-events/logical/:id/history # Get MacroEvent version history
+
 # Repository operations (consistent naming)
 POST   /v1/commits                      # Create commit
 GET    /v1/commits/:hash                # Get specific commit
@@ -838,10 +954,38 @@ async function createEvent(headline, svo, metadata) {
 7. **Phase 1.7**: HTTP API with all endpoints
 8. **Phase 1.8**: Tests
 
-**Phase 2 (Later)**:
-- Type inference from patterns
-- Validation rules
-- Constraint learning
+**Phase 2 (Engineering & Composite Events)**:
+
+**Core Engineering Tasks:**
+1. **Phase 2.1**: Branch creation and switching
+2. **Phase 2.2**: Three-way merge algorithm for events
+3. **Phase 2.3**: Conflict detection and resolution
+4. **Phase 2.4**: Event diff visualization
+5. **Phase 2.5**: HTTP API with Express
+6. **Phase 2.6**: CNL template parsing ("X shall Y" → DeonticSVO)
+7. **Phase 2.7**: Query indexing (jurisdiction, effectiveDate)
+
+**MacroEvent Tasks (NEW):**
+8. **Phase 2-A**: MacroEvent type definition & API
+   - Update `types/event.ts` with MacroEvent interface
+   - Implement `POST /v1/macro-events` endpoint
+   - Add storage adapter methods for MacroEvents
+9. **Phase 2-B**: Three-way merge extension for MacroEvents
+   - Detect conflicts in component event references
+   - Prompt human resolution for complex merges
+   - Update component references post-merge
+10. **Phase 2-C**: Confidence aggregation algorithm
+    - Extend `core/confidence.ts` with `aggregateConfidence()`
+    - Support AND/OR/SEQUENCE/CUSTOM aggregation
+    - Maintain calculation transparency
+
+**Implementation Order for MacroEvents:**
+2-A → 2-C → 2-B (types first, then aggregation, then merge handling)
+
+**Phase 3 (Later)**:
+- Type inference from patterns (including MacroEvent patterns)
+- Validation rules based on observed data
+- Constraint learning from real usage
 
 ## Example Implementation Pattern
 

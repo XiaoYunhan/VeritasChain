@@ -53,8 +53,9 @@ npm install && npm run build && npm test
 - **Zero External Dependencies**: Only 4 runtime deps as specified
 
 ### Phase 2: Engineering & Scale (Weeks 5-8) 🚧
-**Goal**: Robust tooling and indexing for large datasets
+**Goal**: Robust tooling, indexing, and composite event support
 
+**Core Engineering:**
 - [ ] Branch creation and switching
 - [ ] Three-way merge algorithm for events
 - [ ] Conflict detection and resolution
@@ -64,7 +65,21 @@ npm install && npm run build && npm test
 - [ ] Jurisdiction + effectiveDate indexing for legal queries
 - [ ] Frontend timeline visualization with amendment chains
 
-**Deliverable**: Production-ready version control with legal clause parsing
+**New: Composite Event Support (MacroEvent L2):**
+- [x] **Phase 2.8**: MacroEvent type definition & API endpoints
+  - Define MacroEvent interface with ComponentRef support
+  - Implement flexible component referencing (logical/version)
+  - Support aggregation logic (AND/OR/ORDERED_ALL/CUSTOM)
+- [ ] **Phase 2.9**: Three-way merge extension for MacroEvents
+  - Detect conflicts in component events
+  - Prompt human resolution for complex merges
+  - Update component references post-merge
+- [x] **Phase 2.10**: Confidence aggregation algorithm
+  - Implement `aggregateConfidence()` in `core/confidence.ts`
+  - Support different aggregation strategies (min/max/custom)
+  - Add confidence caching layer for performance
+
+**Deliverable**: Production-ready version control with composite events and legal clause parsing
 
 ### Phase 3: Quality & Automation (Weeks 9-12) 📋
 **Goal**: ML-driven validation and self-correction
@@ -138,6 +153,26 @@ statement: {
 // SUBSET, UNION, INTERSECTION, EXISTS, FORALL, GT, LT, EQ,
 // BEFORE, AFTER (temporal)
 ```
+
+### Object-SVO-Clause-Event Hierarchy
+
+VeritasChain implements a mathematically elegant hierarchy mapping linguistic concepts to version-controlled objects:
+
+| Layer | Linguistic Role | Data Structure | Version Control | Example |
+|-------|-----------------|----------------|-----------------|---------|
+| **Object** | Noun phrase (entity/concept) | `EntityObject` | ✅ Individual | "JPMorgan Chase" |
+| **Verb/Predicate** | Action/relation | `ActionObject` | ✅ Individual | "acquires" |
+| **SVO** | Simple proposition | `SVO` (leaf Statement) | Via components | "JPMorgan acquires StartupAI" |
+| **Clause** | Logical compound | `LogicalClause` | Via Event | "IF acquisition THEN price > $10B" |
+| **Event (L1)** | Semantic unit | `Event` (fact/norm) | ✅ Individual | News event or legal clause |
+| **MacroEvent (L2)** | Event narrative | `MacroEvent` | ✅ Individual | Multi-step acquisition process |
+
+This hierarchy follows a λ-calculus style abstraction:
+```
+Object → Predicate → Proposition → Formula → Event → Narrative
+```
+
+Each layer is a functor over the previous, forming a category-theoretic chain that's both intuitive and formally rigorous.
 
 ### Rich Modifier System
 Events support comprehensive context through standardized modifiers:
@@ -349,7 +384,62 @@ await repo.diff("apple-inc", "1.0", "1.2");
 // Shows: revenue change, CEO change, confidence evolution
 ```
 
-### Example 3: Blockchain Verification (Future)
+### Example 3: MacroEvent - Composite Event Tracking (Phase 2)
+
+```typescript
+// Create individual events for a multi-step acquisition process
+const dueDiligenceEvent = await repo.addEvent({
+  title: "Tech Corp Begins Due Diligence on StartupAI",
+  statement: { type: 'SVO', subjectRef: "tech-corp", verbRef: "investigates", objectRef: "startupai" },
+  dateOccurred: "2025-01-10T09:00:00Z"
+});
+
+const boardApprovalEvent = await repo.addEvent({
+  title: "Tech Corp Board Approves StartupAI Acquisition",
+  statement: { type: 'SVO', subjectRef: "board", verbRef: "approves", objectRef: "acquisition-deal" },
+  dateOccurred: "2025-01-12T14:00:00Z"
+});
+
+const closingEvent = await repo.addEvent({
+  title: "Tech Corp Completes StartupAI Acquisition",
+  statement: { type: 'SVO', subjectRef: "tech-corp", verbRef: "acquires", objectRef: "startupai" },
+  dateOccurred: "2025-01-15T16:00:00Z"
+});
+
+// Create a MacroEvent to represent the entire acquisition process
+const acquisitionMacro = await repo.addMacroEvent({
+  "@type": "MacroEvent",
+  title: "Tech Corp's Complete Acquisition of StartupAI",
+  statement: {
+    type: 'SEQUENCE',  // Events must occur in order
+    operands: [
+      { type: 'SVO', subjectRef: "tech-corp", verbRef: "investigates", objectRef: "startupai" },
+      { type: 'SVO', subjectRef: "board", verbRef: "approves", objectRef: "acquisition-deal" },
+      { type: 'SVO', subjectRef: "tech-corp", verbRef: "acquires", objectRef: "startupai" }
+    ]
+  },
+  components: [
+    dueDiligenceEvent['@id'],
+    boardApprovalEvent['@id'],
+    closingEvent['@id']
+  ],
+  aggregation: 'ORDERED_ALL',
+  summary: "Multi-step acquisition process from due diligence to closing",
+  modifiers: {
+    temporal: { duration: "P5D" },  // 5-day process
+    degree: { scale: "large" }
+  }
+});
+
+// Confidence aggregation (min for ORDERED_ALL - weakest link)
+// If events have confidences [0.9, 0.95, 0.85], macro confidence = 0.85
+const macroConfidence = calculator.aggregateConfidence(
+  [0.9, 0.95, 0.85],
+  'ORDERED_ALL'  // Uses min() for sequential dependencies
+);
+```
+
+### Example 4: Blockchain Verification (Future)
 
 ```typescript
 // In Phase 5, same API but with blockchain backend
