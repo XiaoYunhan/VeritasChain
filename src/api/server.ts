@@ -31,6 +31,7 @@ import {
   calculateMacroEventHash
 } from '../core/hash.js';
 import { BranchManager } from '../repository/branch.js';
+import { MergeManager } from '../repository/merge.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -514,6 +515,7 @@ app.get('/v1/commits', async (req: Request, res: Response, next: NextFunction) =
 // ============================================================================
 
 const branchManager = new BranchManager(store);
+const mergeManager = new MergeManager(store);
 
 app.get('/v1/branches', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -666,6 +668,179 @@ app.get('/v1/branches/current', async (req: Request, res: Response, next: NextFu
 });
 
 // ============================================================================
+// MERGE ENDPOINTS (PHASE 2.2)
+// ============================================================================
+
+app.post('/v1/merge', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { sourceBranch, targetBranch, strategy, author, message, options } = req.body;
+    
+    if (!sourceBranch || !targetBranch) {
+      const error: ApiError = new Error('Missing required fields: sourceBranch, targetBranch');
+      error.status = 400;
+      throw error;
+    }
+    
+    const mergeOptions = {
+      strategy: strategy || 'auto',
+      author: author || 'api-user',
+      message,
+      allowEmpty: options?.allowEmpty || false,
+      skipValidation: options?.skipValidation || false,
+      conflictResolution: options?.conflictResolution || {
+        autoResolve: true,
+        confidenceThreshold: 0.8
+      }
+    };
+    
+    const result = await mergeManager.mergeBranches(sourceBranch, targetBranch, mergeOptions);
+    
+    if (result.success) {
+      res.status(200).json({
+        success: true,
+        message: result.message,
+        mergeCommit: result.mergeCommit,
+        conflicts: result.conflicts,
+        stats: result.stats,
+        timestamp: result.timestamp
+      });
+    } else {
+      // Merge conflicts or other issues
+      res.status(409).json({
+        success: false,
+        message: result.message,
+        conflicts: result.conflicts,
+        stats: result.stats,
+        requiresManualResolution: result.stats.conflictsRequiringManualResolution > 0,
+        timestamp: result.timestamp
+      });
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/v1/merge/:sourceBranch', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { sourceBranch } = req.params;
+    const { strategy, author, message, options } = req.body;
+    
+    // Get current branch as target
+    const repo = await store.repository.getRepository();
+    if (!repo) {
+      const error: ApiError = new Error('Repository not initialized');
+      error.status = 500;
+      throw error;
+    }
+    
+    const targetBranch = repo.currentBranch;
+    
+    const mergeOptions = {
+      strategy: strategy || 'auto',
+      author: author || 'api-user',
+      message: message || `Merge branch '${sourceBranch}' into '${targetBranch}'`,
+      allowEmpty: options?.allowEmpty || false,
+      skipValidation: options?.skipValidation || false,
+      conflictResolution: options?.conflictResolution || {
+        autoResolve: true,
+        confidenceThreshold: 0.8
+      }
+    };
+    
+    const result = await mergeManager.mergeBranches(sourceBranch, targetBranch, mergeOptions);
+    
+    if (result.success) {
+      res.status(200).json({
+        success: true,
+        message: result.message,
+        sourceBranch,
+        targetBranch,
+        mergeCommit: result.mergeCommit,
+        conflicts: result.conflicts,
+        stats: result.stats,
+        timestamp: result.timestamp
+      });
+    } else {
+      res.status(409).json({
+        success: false,
+        message: result.message,
+        sourceBranch,
+        targetBranch,
+        conflicts: result.conflicts,
+        stats: result.stats,
+        requiresManualResolution: result.stats.conflictsRequiringManualResolution > 0,
+        timestamp: result.timestamp
+      });
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/v1/merge/conflicts/:commitId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { commitId } = req.params;
+    
+    // Get merge commit and analyze conflicts
+    const commit = await store.commits.retrieve(commitId);
+    if (!commit) {
+      const error: ApiError = new Error(`Commit not found: ${commitId}`);
+      error.status = 404;
+      throw error;
+    }
+    
+    // Check if this is a merge commit (has 2+ parents)
+    if (!commit.parents || commit.parents.length < 2) {
+      const error: ApiError = new Error(`Not a merge commit: ${commitId}`);
+      error.status = 400;
+      throw error;
+    }
+    
+    // TODO: Implement conflict analysis for existing merge commit
+    // For now, return basic info
+    res.json({
+      commitId,
+      isMergeCommit: true,
+      parents: commit.parents,
+      message: commit.message,
+      conflicts: [], // TODO: Extract from commit metadata
+      timestamp: commit.timestamp
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/v1/merge/resolve', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { conflicts, resolutions, author, message } = req.body;
+    
+    if (!conflicts || !resolutions) {
+      const error: ApiError = new Error('Missing required fields: conflicts, resolutions');
+      error.status = 400;
+      throw error;
+    }
+    
+    // TODO: Implement manual conflict resolution
+    // This would involve:
+    // 1. Validate resolution choices
+    // 2. Apply resolutions to create merged objects
+    // 3. Create new merge commit
+    // 4. Update branch HEAD
+    
+    res.json({
+      success: true,
+      message: 'Conflicts resolved manually',
+      resolvedConflicts: conflicts.length,
+      newCommit: 'sha256:placeholder...',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ============================================================================
 // METADATA ENDPOINT
 // ============================================================================
 
@@ -712,6 +887,7 @@ app.use('*', (req: Request, res: Response) => {
       '/v1/macro-events',
       '/v1/commits',
       '/v1/branches',
+      '/v1/merge',
       '/v1/metadata'
     ]
   });

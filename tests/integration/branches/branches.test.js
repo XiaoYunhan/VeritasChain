@@ -11,7 +11,7 @@
  * - Error handling and edge cases
  */
 
-import { app } from './dist/api/server.js';
+import { app } from '../../../dist/api/server.js';
 
 const port = 3002;  // Use different port for branch testing
 let server;

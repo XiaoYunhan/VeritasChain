@@ -6,7 +6,7 @@
  * This demonstrates the complete REST API functionality including MacroEvents.
  */
 
-import { app } from './dist/api/server.js';
+import { app } from '../../../dist/api/server.js';
 import { v4 as uuidv4 } from 'uuid';
 
 const port = 3001;  // Use different port for testing
