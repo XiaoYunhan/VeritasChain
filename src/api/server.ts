@@ -30,6 +30,7 @@ import {
   calculateEventHash,
   calculateMacroEventHash
 } from '../core/hash.js';
+import { BranchManager } from '../repository/branch.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -509,6 +510,162 @@ app.get('/v1/commits', async (req: Request, res: Response, next: NextFunction) =
 });
 
 // ============================================================================
+// BRANCH ENDPOINTS (PHASE 2.1)
+// ============================================================================
+
+const branchManager = new BranchManager(store);
+
+app.get('/v1/branches', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const verbose = req.query.verbose === 'true';
+    const includeStats = req.query.stats === 'true';
+    
+    const branches = await branchManager.listBranches({ verbose, includeStats });
+    
+    res.json({
+      branches,
+      count: branches.length,
+      current: branches.find(b => b.current)?.name || null
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/v1/branches', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { name, fromCommit, author, description, force } = req.body;
+    
+    if (!name) {
+      const error: ApiError = new Error('Missing required field: name');
+      error.status = 400;
+      throw error;
+    }
+    
+    const result = await branchManager.createBranch(name, {
+      fromCommit,
+      author,
+      description,
+      force
+    });
+    
+    if (!result.success) {
+      const error: ApiError = new Error(result.message);
+      error.status = 400;
+      throw error;
+    }
+    
+    res.status(201).json({
+      success: true,
+      message: result.message,
+      branch: result.branch,
+      created: new Date().toISOString()
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put('/v1/branches/:name/checkout', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { name } = req.params;
+    const { force, createIfMissing } = req.body;
+    
+    const result = await branchManager.switchBranch(name, {
+      force,
+      createIfMissing
+    });
+    
+    if (!result.success) {
+      const error: ApiError = new Error(result.message);
+      error.status = 400;
+      throw error;
+    }
+    
+    res.json({
+      success: true,
+      message: result.message,
+      currentBranch: name,
+      previousBranch: result.previousBranch,
+      switched: new Date().toISOString()
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.delete('/v1/branches/:name', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { name } = req.params;
+    const { force } = req.query;
+    
+    const result = await branchManager.deleteBranch(name, {
+      force: force === 'true'
+    });
+    
+    if (!result.success) {
+      const error: ApiError = new Error(result.message);
+      error.status = 400;
+      throw error;
+    }
+    
+    res.json({
+      success: true,
+      message: result.message,
+      deletedBranch: result.branch,
+      deleted: new Date().toISOString()
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put('/v1/branches/:oldName/rename/:newName', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { oldName, newName } = req.params;
+    const { force } = req.body;
+    
+    const result = await branchManager.renameBranch(oldName, newName, { force });
+    
+    if (!result.success) {
+      const error: ApiError = new Error(result.message);
+      error.status = 400;
+      throw error;
+    }
+    
+    res.json({
+      success: true,
+      message: result.message,
+      oldName,
+      newName,
+      branch: result.branch,
+      renamed: new Date().toISOString()
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/v1/branches/current', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const currentBranch = await branchManager.getCurrentBranch();
+    
+    if (!currentBranch) {
+      const error: ApiError = new Error('No current branch found');
+      error.status = 404;
+      throw error;
+    }
+    
+    res.json({
+      branch: currentBranch,
+      current: true
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ============================================================================
 // METADATA ENDPOINT
 // ============================================================================
 
@@ -554,6 +711,7 @@ app.use('*', (req: Request, res: Response) => {
       '/v1/events',
       '/v1/macro-events',
       '/v1/commits',
+      '/v1/branches',
       '/v1/metadata'
     ]
   });

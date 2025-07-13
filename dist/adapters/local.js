@@ -455,6 +455,28 @@ class LocalCommitStore extends LocalContentStore {
     trees = new Map();
     constructor(baseDirectory) {
         super(baseDirectory, 'objects/commits');
+        // Load existing branches on initialization
+        this.loadBranches();
+    }
+    async loadBranches() {
+        try {
+            const branchesDir = path.join(this.baseDirectory, 'refs', 'heads');
+            const files = await fs.readdir(branchesDir);
+            for (const file of files) {
+                if (file.endsWith('.json')) {
+                    const branchPath = path.join(branchesDir, file);
+                    const content = await fs.readFile(branchPath, 'utf-8');
+                    const branch = JSON.parse(content);
+                    this.branches.set(branch.name, branch);
+                }
+            }
+        }
+        catch (error) {
+            // Ignore if branches directory doesn't exist yet
+            if (error.code !== 'ENOENT') {
+                console.warn('Failed to load branches:', error);
+            }
+        }
     }
     async getHistory(branchName, limit) {
         const branch = this.branches.get(branchName);
@@ -504,6 +526,20 @@ class LocalCommitStore extends LocalContentStore {
                 throw error;
             }
         }
+    }
+    async switchBranch(branchName) {
+        // Check if branch exists
+        const branch = this.branches.get(branchName);
+        if (!branch) {
+            throw new Error(`Branch '${branchName}' does not exist`);
+        }
+        // Update HEAD to point to branch's head commit
+        const headPath = path.join(this.baseDirectory, 'HEAD');
+        await fs.writeFile(headPath, `ref: refs/heads/${branchName}`, 'utf-8');
+        // Update current branch reference
+        const currentBranchPath = path.join(this.baseDirectory, 'refs', 'current-branch');
+        await fs.mkdir(path.dirname(currentBranchPath), { recursive: true });
+        await fs.writeFile(currentBranchPath, branchName, 'utf-8');
     }
     async storeTree(tree) {
         this.trees.set(tree['@id'], tree);
@@ -674,6 +710,15 @@ export class LocalStorageAdapter {
                 }
             };
             await this.repository.updateRepository(repo);
+            // Create initial 'main' branch
+            const mainBranch = {
+                name: 'main',
+                head: '', // Will be updated when first commit is made
+                created: new Date().toISOString(),
+                author: 'system',
+                description: 'Default main branch'
+            };
+            await this.commits.createBranch(mainBranch);
         }
     }
     async close() {

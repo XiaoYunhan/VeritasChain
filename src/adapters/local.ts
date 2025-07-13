@@ -568,6 +568,29 @@ class LocalCommitStore extends LocalContentStore<Commit> implements CommitStore 
   
   constructor(baseDirectory: string) {
     super(baseDirectory, 'objects/commits');
+    // Load existing branches on initialization
+    this.loadBranches();
+  }
+
+  private async loadBranches(): Promise<void> {
+    try {
+      const branchesDir = path.join(this.baseDirectory, 'refs', 'heads');
+      const files = await fs.readdir(branchesDir);
+      
+      for (const file of files) {
+        if (file.endsWith('.json')) {
+          const branchPath = path.join(branchesDir, file);
+          const content = await fs.readFile(branchPath, 'utf-8');
+          const branch = JSON.parse(content) as Branch;
+          this.branches.set(branch.name, branch);
+        }
+      }
+    } catch (error) {
+      // Ignore if branches directory doesn't exist yet
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        console.warn('Failed to load branches:', error);
+      }
+    }
   }
   
   async getHistory(branchName: string, limit?: number): Promise<Commit[]> {
@@ -632,6 +655,23 @@ class LocalCommitStore extends LocalContentStore<Commit> implements CommitStore 
         throw error;
       }
     }
+  }
+
+  async switchBranch(branchName: string): Promise<void> {
+    // Check if branch exists
+    const branch = this.branches.get(branchName);
+    if (!branch) {
+      throw new Error(`Branch '${branchName}' does not exist`);
+    }
+
+    // Update HEAD to point to branch's head commit
+    const headPath = path.join(this.baseDirectory, 'HEAD');
+    await fs.writeFile(headPath, `ref: refs/heads/${branchName}`, 'utf-8');
+
+    // Update current branch reference
+    const currentBranchPath = path.join(this.baseDirectory, 'refs', 'current-branch');
+    await fs.mkdir(path.dirname(currentBranchPath), { recursive: true });
+    await fs.writeFile(currentBranchPath, branchName, 'utf-8');
   }
   
   async storeTree(tree: Tree): Promise<void> {
@@ -813,6 +853,17 @@ export class LocalStorageAdapter implements StorageAdapter {
       };
       
       await this.repository.updateRepository(repo);
+
+      // Create initial 'main' branch
+      const mainBranch: Branch = {
+        name: 'main',
+        head: '',  // Will be updated when first commit is made
+        created: new Date().toISOString(),
+        author: 'system',
+        description: 'Default main branch'
+      };
+      
+      await this.commits.createBranch(mainBranch);
     }
   }
   

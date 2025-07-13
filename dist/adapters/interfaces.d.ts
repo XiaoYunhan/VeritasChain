@@ -82,6 +82,7 @@ export interface CommitStore extends ContentStore<Commit> {
     getBranches(): Promise<Branch[]>;
     createBranch(branch: Branch): Promise<void>;
     deleteBranch(name: string): Promise<void>;
+    switchBranch(branchName: string): Promise<void>;
     storeTree(tree: Tree): Promise<void>;
     retrieveTree(id: string): Promise<Tree | null>;
 }
