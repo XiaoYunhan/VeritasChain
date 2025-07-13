@@ -12,7 +12,7 @@ import type {
   ConfidenceFactors, 
   ConfidenceCalculation 
 } from '../types/confidence.js';
-import type { Event } from '../types/event.js';
+import type { Event, MacroEvent } from '../types/event.js';
 
 // Source factor mapping (for kind='fact')
 const SOURCE_FACTORS = {
@@ -134,7 +134,53 @@ export class ConfidenceCalculator {
   }
   
   /**
-   * PHASE 2: Aggregate confidence for MacroEvents
+   * PHASE 2: Aggregate confidence for MacroEvents with caching
+   * 
+   * Calculates composite confidence based on component confidences
+   * and the specified aggregation logic. Uses cache when available.
+   */
+  async aggregateConfidenceForMacro(
+    macro: MacroEvent,
+    componentHashes: string[],
+    commitHash: string,
+    getComponentConfidence: (hash: string) => Promise<number>,
+    cache?: any // ConfidenceCache instance - optional to avoid circular deps
+  ): Promise<ConfidenceCalculation> {
+    // Check cache first if provided
+    if (cache) {
+      const cached = await cache.get(macro['@id'], commitHash, componentHashes);
+      if (cached) {
+        return cached.calculation;
+      }
+    }
+    
+    // Cache miss or no cache - calculate confidence
+    const componentConfidences = await Promise.all(
+      componentHashes.map(hash => getComponentConfidence(hash))
+    );
+    
+    const calculation = this.aggregateConfidence(
+      componentConfidences,
+      macro.aggregation || 'AND',
+      undefined // TODO: Load custom aggregator by macro.customRuleId
+    );
+    
+    // Store in cache if provided
+    if (cache) {
+      await cache.set(
+        macro['@id'],
+        commitHash,
+        componentHashes,
+        calculation.result,
+        calculation
+      );
+    }
+    
+    return calculation;
+  }
+
+  /**
+   * PHASE 2: Aggregate confidence for MacroEvents (non-cached version)
    * 
    * Calculates composite confidence based on component confidences
    * and the specified aggregation logic.

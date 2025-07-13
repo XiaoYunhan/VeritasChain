@@ -26,6 +26,12 @@ class LocalContentStore {
         await fs.mkdir(path.dirname(filePath), { recursive: true });
         await fs.writeFile(filePath, JSON.stringify(content, null, 2), 'utf-8');
     }
+    async forceStore(id, content) {
+        // Always store, even if file exists (for force-evaluation mode)
+        const filePath = this.getFilePath(id);
+        await fs.mkdir(path.dirname(filePath), { recursive: true });
+        await fs.writeFile(filePath, JSON.stringify(content, null, 2), 'utf-8');
+    }
     async retrieve(id) {
         try {
             const filePath = this.getFilePath(id);
@@ -112,6 +118,10 @@ class LocalEntityStore extends LocalContentStore {
         await super.store(id, content);
         await this.updateIndex(content);
     }
+    async forceStore(id, content) {
+        await super.forceStore(id, content);
+        await this.updateIndex(content);
+    }
     async findByLogicalId(logicalId) {
         const ids = this.logicalIdIndex.get(logicalId) || [];
         const entities = await this.retrieveBatch(ids);
@@ -172,6 +182,10 @@ class LocalActionStore extends LocalContentStore {
     }
     async store(id, content) {
         await super.store(id, content);
+        await this.updateIndexes(content);
+    }
+    async forceStore(id, content) {
+        await super.forceStore(id, content);
         await this.updateIndexes(content);
     }
     async findByLogicalId(logicalId) {
@@ -245,6 +259,10 @@ class LocalEventStore extends LocalContentStore {
     }
     async store(id, content) {
         await super.store(id, content);
+        await this.updateIndexes(content);
+    }
+    async forceStore(id, content) {
+        await super.forceStore(id, content);
         await this.updateIndexes(content);
     }
     async findByLogicalId(logicalId) {

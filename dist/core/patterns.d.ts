@@ -7,7 +7,7 @@
  * PHASE 2: Will add ML-based type learning from observed patterns.
  */
 import type { SVO } from '../types/statement.js';
-import type { EventRelationship } from '../types/event.js';
+import type { EventRelationship, MacroEvent } from '../types/event.js';
 export interface ObservedPattern {
     pattern: string;
     count: number;
@@ -29,6 +29,8 @@ export declare class PatternObserver {
     private relationshipPatterns;
     private entityTypePatterns;
     private actionCategoryPatterns;
+    private macroPatterns;
+    private statementPatterns;
     /**
      * Observe an SVO pattern
      * Records subject-verb-object combinations for future learning
@@ -47,6 +49,11 @@ export declare class PatternObserver {
      */
     observeActionCategory(actionRef: string, category: string | undefined, contextEventId: string): void;
     /**
+     * PHASE 2: Observe MacroEvent patterns
+     * Records aggregation patterns and statement types for composite events
+     */
+    observeMacroEvent(macroEvent: MacroEvent): void;
+    /**
      * Get pattern statistics for analysis
      */
     getStatistics(): PatternStatistics;
@@ -58,6 +65,8 @@ export declare class PatternObserver {
         relationships: Record<string, ObservedPattern>;
         entityTypes: Record<string, ObservedPattern>;
         actionCategories: Record<string, ObservedPattern>;
+        macro: Record<string, ObservedPattern>;
+        statements: Record<string, ObservedPattern>;
     };
     /**
      * PHASE 2: Will validate based on learned patterns

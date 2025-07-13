@@ -7,7 +7,7 @@
  * CRITICAL: Confidence is NEVER set manually - always calculated from data
  */
 import type { EventChange, ConfidenceCalculation } from '../types/confidence.js';
-import type { Event } from '../types/event.js';
+import type { Event, MacroEvent } from '../types/event.js';
 declare const SOURCE_FACTORS: {
     readonly Academic: 1;
     readonly Government: 0.95;
@@ -47,6 +47,20 @@ export declare class ConfidenceCalculator {
         normForce?: keyof typeof NORM_FORCE_FACTORS;
     }): ConfidenceCalculation;
     calculateForEvent(event: Event, changeHistory: EventChange[]): ConfidenceCalculation;
+    /**
+     * PHASE 2: Aggregate confidence for MacroEvents with caching
+     *
+     * Calculates composite confidence based on component confidences
+     * and the specified aggregation logic. Uses cache when available.
+     */
+    aggregateConfidenceForMacro(macro: MacroEvent, componentHashes: string[], commitHash: string, getComponentConfidence: (hash: string) => Promise<number>, cache?: any): Promise<ConfidenceCalculation>;
+    /**
+     * PHASE 2: Aggregate confidence for MacroEvents (non-cached version)
+     *
+     * Calculates composite confidence based on component confidences
+     * and the specified aggregation logic.
+     */
+    aggregateConfidence(componentConfidences: number[], aggregation: 'AND' | 'OR' | 'ORDERED_ALL' | 'CUSTOM', customAggregator?: (confidences: number[]) => number): ConfidenceCalculation;
     private getChangeRatesByDay;
     private standardDeviation;
     private explainVolatility;

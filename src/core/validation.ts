@@ -64,7 +64,7 @@ const AGGREGATION_CONSTRAINTS: Record<string, AggregationConstraint> = {
   },
   
   'ORDERED_ALL': {
-    logic: 'SEQUENCE',
+    logic: 'ORDERED_ALL',
     requirements: ['Components must have strictly increasing dateOccurred', 'No temporal gaps > threshold'],
     conflicts: ['Overlapping time periods', 'Missing sequence steps'],
     validationFn: (components, macro) => {

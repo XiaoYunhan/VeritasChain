@@ -11,6 +11,8 @@ export class PatternObserver {
     relationshipPatterns = new Map();
     entityTypePatterns = new Map();
     actionCategoryPatterns = new Map();
+    macroPatterns = new Map();
+    statementPatterns = new Map();
     /**
      * Observe an SVO pattern
      * Records subject-verb-object combinations for future learning
@@ -46,6 +48,21 @@ export class PatternObserver {
         this.recordPattern(this.actionCategoryPatterns, pattern, contextEventId);
     }
     /**
+     * PHASE 2: Observe MacroEvent patterns
+     * Records aggregation patterns and statement types for composite events
+     */
+    observeMacroEvent(macroEvent) {
+        // Record aggregation patterns without validation
+        const aggregationKey = `${macroEvent.aggregation || 'NONE'}-${macroEvent.components.length}`;
+        this.recordPattern(this.macroPatterns, aggregationKey, macroEvent['@id']);
+        // Also record statement type patterns
+        const stmtKey = `macro-${macroEvent.statement.type}`;
+        this.recordPattern(this.statementPatterns, stmtKey, macroEvent['@id']);
+        // Record component count distribution
+        const componentCountKey = `components-${macroEvent.components.length}`;
+        this.recordPattern(this.macroPatterns, componentCountKey, macroEvent['@id']);
+    }
+    /**
      * Get pattern statistics for analysis
      */
     getStatistics() {
@@ -53,7 +70,9 @@ export class PatternObserver {
             ...this.svoPatterns.values(),
             ...this.relationshipPatterns.values(),
             ...this.entityTypePatterns.values(),
-            ...this.actionCategoryPatterns.values()
+            ...this.actionCategoryPatterns.values(),
+            ...this.macroPatterns.values(),
+            ...this.statementPatterns.values()
         ];
         const sortedByCount = [...allPatterns].sort((a, b) => b.count - a.count);
         const sortedByRecent = [...allPatterns].sort((a, b) => new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime());
@@ -72,7 +91,9 @@ export class PatternObserver {
             svo: Object.fromEntries(this.svoPatterns),
             relationships: Object.fromEntries(this.relationshipPatterns),
             entityTypes: Object.fromEntries(this.entityTypePatterns),
-            actionCategories: Object.fromEntries(this.actionCategoryPatterns)
+            actionCategories: Object.fromEntries(this.actionCategoryPatterns),
+            macro: Object.fromEntries(this.macroPatterns),
+            statements: Object.fromEntries(this.statementPatterns)
         };
     }
     /**

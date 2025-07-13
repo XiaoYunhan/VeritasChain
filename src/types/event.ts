@@ -132,7 +132,7 @@ export interface ComponentRef {
  * Validation matrix entry for pre-merge conflict detection
  */
 export interface AggregationConstraint {
-  logic: 'AND' | 'OR' | 'SEQUENCE' | 'CUSTOM';
+  logic: 'AND' | 'OR' | 'ORDERED_ALL' | 'CUSTOM';
   requirements: string[];           // Must satisfy conditions
   conflicts: string[];             // Typical conflict patterns
   validationFn?: (components: Event[], macro: MacroEvent) => boolean;

@@ -10,6 +10,7 @@ import type { EntityObject, ActionObject, Event, Commit, Tree, Branch, Repositor
  */
 export interface ContentStore<T> {
     store(id: string, content: T): Promise<void>;
+    forceStore(id: string, content: T): Promise<void>;
     retrieve(id: string): Promise<T | null>;
     exists(id: string): Promise<boolean>;
     delete(id: string): Promise<void>;

@@ -104,6 +104,94 @@ export class ConfidenceCalculator {
             });
         }
     }
+    /**
+     * PHASE 2: Aggregate confidence for MacroEvents with caching
+     *
+     * Calculates composite confidence based on component confidences
+     * and the specified aggregation logic. Uses cache when available.
+     */
+    async aggregateConfidenceForMacro(macro, componentHashes, commitHash, getComponentConfidence, cache // ConfidenceCache instance - optional to avoid circular deps
+    ) {
+        // Check cache first if provided
+        if (cache) {
+            const cached = await cache.get(macro['@id'], commitHash, componentHashes);
+            if (cached) {
+                return cached.calculation;
+            }
+        }
+        // Cache miss or no cache - calculate confidence
+        const componentConfidences = await Promise.all(componentHashes.map(hash => getComponentConfidence(hash)));
+        const calculation = this.aggregateConfidence(componentConfidences, macro.aggregation || 'AND', undefined // TODO: Load custom aggregator by macro.customRuleId
+        );
+        // Store in cache if provided
+        if (cache) {
+            await cache.set(macro['@id'], commitHash, componentHashes, calculation.result, calculation);
+        }
+        return calculation;
+    }
+    /**
+     * PHASE 2: Aggregate confidence for MacroEvents (non-cached version)
+     *
+     * Calculates composite confidence based on component confidences
+     * and the specified aggregation logic.
+     */
+    aggregateConfidence(componentConfidences, aggregation, customAggregator) {
+        if (componentConfidences.length === 0) {
+            return {
+                result: 0,
+                factors: { volatility: 0, evidence: 0, source: 0 },
+                formula: 'No components → confidence = 0',
+                timestamp: new Date().toISOString(),
+                breakdown: {
+                    volatilityReason: 'No components to aggregate',
+                    evidenceReason: 'N/A',
+                    sourceReason: 'N/A'
+                }
+            };
+        }
+        let result;
+        let formula;
+        switch (aggregation) {
+            case 'AND':
+            case 'ORDERED_ALL':
+                // Weakest link principle - all components must be reliable
+                result = Math.min(...componentConfidences);
+                formula = `min(${componentConfidences.map(c => c.toFixed(3)).join(', ')}) = ${result.toFixed(3)}`;
+                break;
+            case 'OR':
+                // Strongest evidence principle - any reliable component suffices
+                result = Math.max(...componentConfidences);
+                formula = `max(${componentConfidences.map(c => c.toFixed(3)).join(', ')}) = ${result.toFixed(3)}`;
+                break;
+            case 'CUSTOM':
+                if (!customAggregator) {
+                    throw new Error('Custom aggregator function required for CUSTOM logic');
+                }
+                result = Math.max(0, Math.min(1, customAggregator(componentConfidences)));
+                formula = `custom(${componentConfidences.map(c => c.toFixed(3)).join(', ')}) = ${result.toFixed(3)}`;
+                break;
+            default:
+                // Default to average (should not reach here)
+                const sum = componentConfidences.reduce((a, b) => a + b, 0);
+                result = sum / componentConfidences.length;
+                formula = `avg(${componentConfidences.map(c => c.toFixed(3)).join(', ')}) = ${result.toFixed(3)}`;
+        }
+        return {
+            result,
+            factors: {
+                volatility: 0, // Not applicable for aggregation
+                evidence: result, // Aggregated confidence serves as evidence
+                source: 1.0 // Source factor is handled at component level
+            },
+            formula: `MacroEvent[${aggregation}]: ${formula}`,
+            timestamp: new Date().toISOString(),
+            breakdown: {
+                volatilityReason: 'Volatility calculated at component level',
+                evidenceReason: `Aggregation logic: ${aggregation}`,
+                sourceReason: `${componentConfidences.length} components aggregated`
+            }
+        };
+    }
     // Helper methods
     getChangeRatesByDay(changes) {
         const changesByDay = new Map();

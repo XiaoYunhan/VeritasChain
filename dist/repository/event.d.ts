@@ -7,6 +7,7 @@
 import type { Event, EventRelationship } from '../types/event.js';
 import type { Statement } from '../types/statement.js';
 import type { TemporalModifier, SpatialModifier, MannerModifier, DegreeModifier, PurposeModifier, ConditionalModifier, CertaintyModifier, LegalModifier } from '../types/modifiers.js';
+import type { ConfidenceCalculation } from '../types/confidence.js';
 import type { EventChange } from '../types/confidence.js';
 import type { StorageAdapter } from '../adapters/interfaces.js';
 export interface CreateEventParams {
@@ -114,7 +115,7 @@ export declare class EventRepository {
     recalculateConfidence(logicalId: string): Promise<{
         currentConfidence: number;
         recalculatedConfidence: number;
-        factors: any;
+        factors: ConfidenceCalculation;
     }>;
     private incrementVersion;
     private compareVersions;

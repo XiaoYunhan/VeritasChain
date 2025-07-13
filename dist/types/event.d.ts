@@ -4,7 +4,7 @@
  * Core event structure supporting both factual events (news)
  * and normative clauses (legal) with unified logical reasoning.
  */
-import type { Statement } from './statement.js';
+import type { Statement, LogicalClause } from './statement.js';
 import type { TemporalModifier, SpatialModifier, MannerModifier, DegreeModifier, PurposeModifier, ConditionalModifier, CertaintyModifier, LegalModifier } from './modifiers.js';
 export interface EventRelationship {
     type: 'causedBy' | 'causes' | 'enables' | 'prevents' | 'threatens' | 'derivedFrom' | 'supports' | 'contradicts' | 'updates' | 'corrects' | 'clarifies' | 'relatedTo' | 'partOf' | 'contains' | 'precedes' | 'follows' | 'amends' | 'supersedes' | 'refersTo' | 'dependentOn';
@@ -55,4 +55,41 @@ export interface Event {
     };
     relationships?: EventRelationship[];
     metadata: EventMetadata;
+}
+/**
+ * Component reference supporting both logical ID (latest) and version-specific modes
+ */
+export interface ComponentRef {
+    logicalId: string;
+    version?: string;
+}
+/**
+ * Validation matrix entry for pre-merge conflict detection
+ */
+export interface AggregationConstraint {
+    logic: 'AND' | 'OR' | 'ORDERED_ALL' | 'CUSTOM';
+    requirements: string[];
+    conflicts: string[];
+    validationFn?: (components: Event[], macro: MacroEvent) => boolean;
+}
+/**
+ * PHASE 2: Composite Event (L2) - MacroEvent
+ *
+ * Represents a higher-level narrative composed of multiple atomic events.
+ * Supports aggregation logic for confidence calculation and complex
+ * logical relationships between component events.
+ */
+export interface MacroEvent extends Omit<Event, "@type"> {
+    "@type": "MacroEvent";
+    components: ComponentRef[];
+    aggregation?: 'AND' | 'OR' | 'ORDERED_ALL' | 'CUSTOM';
+    timelineSpan?: {
+        start: string;
+        end: string;
+    };
+    customRuleId?: string;
+    summary?: string;
+    labels?: string[];
+    importance?: 1 | 2 | 3 | 4 | 5;
+    statement: LogicalClause;
 }

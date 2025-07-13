@@ -6,6 +6,7 @@
  */
 // Local file system implementation
 export { LocalStorageAdapter } from './local.js';
+import { LocalStorageAdapter } from './local.js';
 // Factory function for creating storage adapters
 export function createStorageAdapter(config) {
     switch (config.type) {

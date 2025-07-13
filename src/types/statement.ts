@@ -10,6 +10,9 @@ export interface SVO {
   subjectRef: string;  // @id reference to EntityObject
   verbRef: string;     // @id reference to ActionObject  
   objectRef: string;   // @id reference to EntityObject
+  
+  // PHASE 2: Canonicalization for deduplication
+  canonicalHash?: string;  // Pre-computed hash from SVOUtils.hashSVO()
 }
 
 export interface LogicalClause {
