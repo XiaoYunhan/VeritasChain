@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
- * HTTP API Test Suite for Phase 2.5
+ * HTTP API Test Suite for Unified Event Model
  * 
  * Tests all implemented API endpoints with proper validation and error handling.
- * This demonstrates the complete REST API functionality including MacroEvents.
+ * This demonstrates the complete REST API functionality including unified Event model
+ * with composite events (formerly MacroEvents) and new Event features.
  */
 
 import { app } from '../../../dist/api/server.js';
@@ -76,7 +77,7 @@ const testEvent = {
 let createdEntities = [];
 let createdActions = [];
 let createdEvents = [];
-let createdMacroEvents = [];
+let createdCompositeEvents = [];
 
 // Test runner
 async function runTests() {
@@ -105,9 +106,9 @@ async function runTests() {
     console.log('\\n📋 Test 4: Event Operations');
     await testEventOperations(results);
     
-    // Test 5: MacroEvent Operations
-    console.log('\\n📋 Test 5: MacroEvent Operations');
-    await testMacroEventOperations(results);
+    // Test 5: Composite Event Operations (Unified Event Model)
+    console.log('\\n📋 Test 5: Composite Event Operations');
+    await testCompositeEventOperations(results);
     
     // Test 6: Repository Operations
     console.log('\\n📋 Test 6: Repository Operations');
@@ -117,8 +118,12 @@ async function runTests() {
     console.log('\\n📋 Test 7: Error Handling');
     await testErrorHandling(results);
     
-    // Test 8: Metadata Endpoint
-    console.log('\\n📋 Test 8: Metadata Endpoint');
+    // Test 8: Legacy MacroEvent Support
+    console.log('\\n📋 Test 8: Legacy MacroEvent Support');
+    await testLegacyMacroEventSupport(results);
+    
+    // Test 9: Metadata Endpoint
+    console.log('\\n📋 Test 9: Metadata Endpoint');
     await testMetadataEndpoint(results);
 
   } catch (error) {
@@ -127,7 +132,7 @@ async function runTests() {
     results.errors.push(`Test suite error: ${error.message}`);
   } finally {
     console.log('\\n' + '='.repeat(60));
-    console.log('📊 PHASE 2.5 HTTP API TEST RESULTS');
+    console.log('📊 UNIFIED EVENT MODEL HTTP API TEST RESULTS');
     console.log('='.repeat(60));
     console.log(`✅ Passed: ${results.passed}`);
     console.log(`❌ Failed: ${results.failed}`);
@@ -299,18 +304,18 @@ async function testEventOperations(results) {
   }
 }
 
-async function testMacroEventOperations(results) {
+async function testCompositeEventOperations(results) {
   try {
-    // Create MacroEvent only if we have component events
+    // Create Composite Event only if we have component events
     if (createdEvents.length === 0) {
-      console.log('  ⚠️  Skipping MacroEvent tests - no component events created');
+      console.log('  ⚠️  Skipping Composite Event tests - no component events created');
       return;
     }
     
-    const testMacroEvent = {
+    const testCompositeEvent = {
       '@context': 'https://schema.org/',
-      '@type': 'MacroEvent',
-      logicalId: `test-macro-${uuidv4()}`,
+      '@type': 'Event',  // Unified Event type
+      logicalId: `test-composite-${uuidv4()}`,
       version: '1.0',
       title: 'Test Acquisition Process',
       description: 'A composite event representing the complete acquisition process',
@@ -318,21 +323,13 @@ async function testMacroEventOperations(results) {
       dateRecorded: new Date().toISOString(),
       kind: 'fact',
       statement: {
-        type: 'SVO',
-        subjectRef: createdEntities[0] || 'placeholder',
-        verbRef: createdActions[0] || 'placeholder',
-        objectRef: createdEntities[0] || 'placeholder'
+        type: 'AND',  // Logical statement for composite events
+        operands: []
       },
       components: [
         { logicalId: testEvent.logicalId }  // Reference without version for latest
       ],
-      aggregation: 'OR',  // Use OR aggregation which is less strict
-      timelineSpan: { 
-        start: new Date(Date.now() - 86400000).toISOString(),  // 1 day ago
-        end: new Date().toISOString()  // Now
-      },
-      summary: 'Test acquisition process',
-      importance: 3,
+      aggregation: 'ANY',  // Use ANY aggregation which is less strict
       modifiers: {
         temporal: { duration: 'P1D' }
       },
@@ -340,45 +337,68 @@ async function testMacroEventOperations(results) {
       metadata: {
         source: { name: 'Test System', type: 'Academic' },
         author: 'test@example.com',
-        version: '1.0'
+        version: '1.0',
+        confidence: 0.8
       },
       commitHash: 'sha256:test-commit-hash'
     };
     
-    // Create MacroEvent (should trigger validation)
-    const createResponse = await fetch(`http://localhost:${port}/v1/macro-events`, {
+    // Create Composite Event using unified Event endpoint
+    const createResponse = await fetch(`http://localhost:${port}/v1/events`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(testMacroEvent)
+      body: JSON.stringify(testCompositeEvent)
     });
     
     if (!createResponse.ok) {
       const errorData = await createResponse.json();
-      throw new Error(`MacroEvent creation failed: ${errorData.error}`);
+      throw new Error(`Composite Event creation failed: ${errorData.error}`);
     }
     
     const createData = await createResponse.json();
-    const macroId = createData['@id'];
-    createdMacroEvents.push(macroId);
+    const compositeId = createData['@id'];
+    createdCompositeEvents.push(compositeId);
     
-    console.log(`  ✅ MacroEvent created: ${macroId}`);
+    console.log(`  ✅ Composite Event created: ${compositeId}`);
     results.passed++;
     
-    // Retrieve MacroEvent
-    const getResponse = await fetch(`http://localhost:${port}/v1/macro-events/${macroId}`);
-    const macroData = await getResponse.json();
+    // Retrieve Composite Event
+    const getResponse = await fetch(`http://localhost:${port}/v1/events/${compositeId}`);
+    const compositeData = await getResponse.json();
     
-    if (getResponse.ok && macroData.title === testMacroEvent.title) {
-      console.log('  ✅ MacroEvent retrieval passed');
+    if (getResponse.ok && compositeData.title === testCompositeEvent.title) {
+      console.log('  ✅ Composite Event retrieval passed');
       results.passed++;
     } else {
-      throw new Error('MacroEvent retrieval validation failed');
+      throw new Error('Composite Event retrieval validation failed');
+    }
+    
+    // Test depth calculation endpoint
+    const depthResponse = await fetch(`http://localhost:${port}/v1/events/${compositeId}/depth`);
+    const depthData = await depthResponse.json();
+    
+    if (depthResponse.ok && typeof depthData.depth === 'number') {
+      console.log(`  ✅ Event depth calculation passed (depth: ${depthData.depth})`);
+      results.passed++;
+    } else {
+      throw new Error('Event depth calculation failed');
+    }
+    
+    // Test confidence formula endpoint
+    const formulaResponse = await fetch(`http://localhost:${port}/v1/events/${compositeId}/formula`);
+    const formulaData = await formulaResponse.json();
+    
+    if (formulaResponse.ok && formulaData.formula) {
+      console.log(`  ✅ Confidence formula derivation passed (formula: ${formulaData.formula})`);
+      results.passed++;
+    } else {
+      throw new Error('Confidence formula derivation failed');
     }
     
   } catch (error) {
-    console.log(`  ❌ MacroEvent operations error: ${error.message}`);
+    console.log(`  ❌ Composite Event operations error: ${error.message}`);
     results.failed++;
-    results.errors.push(`MacroEvent operations: ${error.message}`);
+    results.errors.push(`Composite Event operations: ${error.message}`);
   }
 }
 
@@ -394,7 +414,7 @@ async function testRepositoryOperations(results) {
           entities: createdEntities,
           actions: createdActions,
           events: createdEvents,
-          macroEvents: createdMacroEvents
+          compositeEvents: createdCompositeEvents
         }
       })
     });
@@ -456,6 +476,41 @@ async function testErrorHandling(results) {
     console.log(`  ❌ Error handling test error: ${error.message}`);
     results.failed++;
     results.errors.push(`Error handling: ${error.message}`);
+  }
+}
+
+async function testLegacyMacroEventSupport(results) {
+  try {
+    // Test legacy MacroEvent endpoint redirects and warnings
+    if (createdCompositeEvents.length === 0) {
+      console.log('  ⚠️  Skipping legacy MacroEvent tests - no composite events created');
+      return;
+    }
+    
+    // Test GET /v1/macro-events/:hash redirect
+    const legacyGetResponse = await fetch(`http://localhost:${port}/v1/macro-events/${createdCompositeEvents[0]}`);
+    
+    if (legacyGetResponse.ok) {
+      console.log('  ✅ Legacy MacroEvent GET redirect works');
+      results.passed++;
+    } else {
+      throw new Error('Legacy MacroEvent GET redirect failed');
+    }
+    
+    // Test deprecated warning in response headers
+    const deprecationHeader = legacyGetResponse.headers.get('Deprecation') || 
+                              legacyGetResponse.headers.get('Warning');
+    if (deprecationHeader) {
+      console.log('  ✅ Deprecation warning present in headers');
+      results.passed++;
+    } else {
+      console.log('  ⚠️  No deprecation warning found (optional)');
+    }
+    
+  } catch (error) {
+    console.log(`  ❌ Legacy MacroEvent support error: ${error.message}`);
+    results.failed++;
+    results.errors.push(`Legacy MacroEvent support: ${error.message}`);
   }
 }
 

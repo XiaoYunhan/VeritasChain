@@ -1,23 +1,210 @@
 /**
- * Event and Relationship Definitions
+ * Unified Event Type Definitions
  * 
- * Core event structure supporting both factual events (news) 
- * and normative clauses (legal) with unified logical reasoning.
+ * A single recursive Event type that can represent both leaf events and
+ * composite events (formerly MacroEvents). Any event can reference other
+ * events through the optional components array, enabling infinite narrative layers.
  */
 
-import type { Statement, LogicalClause } from './statement.js';
+import type { Statement } from './statement.js';
 import type { 
-  TemporalModifier, 
-  SpatialModifier, 
-  MannerModifier, 
-  DegreeModifier, 
-  PurposeModifier, 
-  ConditionalModifier, 
-  CertaintyModifier, 
-  LegalModifier 
+  TemporalModifier,
+  SpatialModifier,
+  MannerModifier,
+  DegreeModifier,
+  PurposeModifier,
+  ConditionalModifier,
+  CertaintyModifier,
+  LegalModifier
 } from './modifiers.js';
 
-// Relationship types - unified and clear
+/**
+ * Component reference for recursive event composition
+ */
+export interface ComponentRef {
+  logicalId: string;              // Points to logical entity
+  version?: string;               // Can lock to specific version (optional = latest)
+  weak?: boolean;                 // true = soft dependency, ignore in confidence aggregation
+}
+
+/**
+ * Aggregation logic for composite events
+ */
+export type AggregationLogic = 'ALL' | 'ANY' | 'ORDERED' | 'CUSTOM';
+
+/**
+ * Modifier collection for events
+ */
+export interface Modifiers {
+  temporal?: TemporalModifier;
+  spatial?: SpatialModifier;
+  manner?: MannerModifier;
+  degree?: DegreeModifier;
+  purpose?: PurposeModifier;
+  condition?: ConditionalModifier;
+  certainty?: CertaintyModifier;
+  legal?: LegalModifier;
+}
+
+/**
+ * Unified Event Interface
+ * 
+ * Represents both atomic events (no components) and composite events (with components).
+ * The presence of the components array determines whether this is a leaf or composite event.
+ */
+export interface Event<Stmt extends Statement = Statement> {
+  "@context": "https://schema.org/";
+  "@type": "Event";               // No longer distinguish between Event/MacroEvent
+  "@id": string;                  // SHA-256 content hash
+  
+  // Version control
+  logicalId: string;              // UUID v4 for logical grouping
+  version: string;                // Semantic version
+  previousVersion?: string;       // Previous version @id
+  commitHash: string;             // Creating commit hash
+  
+  // Core content
+  title: string;
+  description?: string;
+  dateOccurred: string;           // ISO 8601 when event happened
+  dateRecorded: string;           // ISO 8601 when recorded
+  dateModified?: string;          // ISO 8601 last modification
+  
+  // Event classification
+  kind?: 'fact' | 'norm';         // Default: 'fact'
+  
+  // Logical statement - can be atomic or composite
+  statement: Stmt;                // Leaf = SVO/LogicalClause, Composite = usually LogicalClause
+  
+  // Modifiers and relationships
+  modifiers?: Modifiers;
+  relationships?: EventRelationship[];
+  
+  // Composite event fields (optional)
+  components?: ComponentRef[];    // Presence indicates composite event
+  aggregation?: AggregationLogic; // How to combine components (default: 'ALL')
+  customRuleId?: string;          // For CUSTOM aggregation logic
+  depth?: number;                 // Cached expansion depth (system-managed)
+  summary?: string;               // Human-readable summary for composite events
+  
+  // Timeline visualization (useful for composite events)
+  timelineSpan?: {
+    start: string;                // ISO 8601
+    end: string;                  // ISO 8601
+  };
+  
+  // Importance level (1-5, useful for filtering/ranking)
+  importance?: 1 | 2 | 3 | 4 | 5;
+  
+  // Metadata
+  metadata: EventMetadata;
+  
+  // Blockchain preparation
+  signature?: string;
+  merkleRoot?: string;
+}
+
+/**
+ * Helper function to determine if an event is composite
+ */
+export function isComposite(event: Event): boolean {
+  return !!(event.components && event.components.length > 0);
+}
+
+/**
+ * Helper function to get event type for backward compatibility
+ */
+export function getEventType(event: Event): string {
+  if (isComposite(event)) {
+    return 'CompositeEvent';
+  }
+  return 'Event';
+}
+
+/**
+ * Migration helper to convert old MacroEvent format
+ */
+export function migrateMacroEvent(oldEvent: any): Event {
+  const newEvent: Event = {
+    ...oldEvent,
+    "@type": "Event"
+  };
+  
+  // Map old field names
+  if ('aggregationLogic' in oldEvent) {
+    newEvent.aggregation = mapAggregationLogic(oldEvent.aggregationLogic);
+    delete (newEvent as any).aggregationLogic;
+  }
+  
+  // Convert old component format if needed
+  if (oldEvent.components && typeof oldEvent.components[0] === 'string') {
+    newEvent.components = oldEvent.components.map((id: string) => ({
+      logicalId: id, // Will need resolution in migration script
+      version: oldEvent.version || '1.0' // Use latest by default
+    }));
+  }
+  
+  return newEvent;
+}
+
+/**
+ * Map old aggregation logic values to new format
+ */
+function mapAggregationLogic(old: string): AggregationLogic {
+  const mapping: Record<string, AggregationLogic> = {
+    'AND': 'ALL',
+    'OR': 'ANY',
+    'ORDERED_ALL': 'ORDERED',
+    'CUSTOM': 'CUSTOM'
+  };
+  return mapping[old] || 'ALL';
+}
+
+/**
+ * Backward compatibility type alias
+ * @deprecated Use Event directly
+ */
+export type MacroEvent = Event;
+
+/**
+ * Export for backward compatibility
+ * @deprecated Import from event.ts directly
+ */
+export type { Event as NewsEvent };
+
+/**
+ * Event metadata including source and calculated confidence
+ */
+export interface EventMetadata {
+  source: {
+    name: string;
+    type: 'NewsAgency' | 'Government' | 'Corporate' | 'Academic' | 'Social';
+    url?: string;
+    
+    // Legal source hierarchy for kind='norm'
+    legalType?: 'constitution' | 'statute' | 'regulation' | 'case-law' | 'contract' | 'policy';
+  };
+  author: string;
+  version: string;
+  
+  // NEVER set these manually - always calculated
+  confidence?: number;     // 0-1, = (1-V) × E × S
+  volatility?: number;     // 0-1, calculated from change history
+  evidenceScore?: number;  // 0-1, from certainty.evidence
+  sourceScore?: number;    // 0-1, from source.type (for kind='fact')
+  legalHierarchyWeight?: number; // 0-1, for kind='norm' (replaces sourceScore)
+  
+  // Additional metadata
+  lastModified?: string;
+  datePublished?: string;  // ISO 8601
+  tags?: string[];
+  classification?: string;
+  verifiedBy?: string[];
+}
+
+/**
+ * Relationships between events
+ */
 export interface EventRelationship {
   type: 
     // Causal relationships
@@ -28,148 +215,104 @@ export interface EventRelationship {
     | 'threatens'       // This event threatens target
     
     // Informational relationships  
-    | 'derivedFrom'     // This event was derived from target
-    | 'supports'        // This event supports target
+    | 'derivedFrom'     // This event info derived from target
+    | 'supports'        // This event supports target's claims
     | 'contradicts'     // This event contradicts target
     | 'updates'         // This event updates target
     | 'corrects'        // This event corrects target
-    | 'clarifies'       // This event clarifies target
     
-    // Structural relationships
+    // Contextual relationships
     | 'relatedTo'       // General relationship
     | 'partOf'          // This event is part of target
     | 'contains'        // This event contains target
     | 'precedes'        // This event happens before target
     | 'follows'         // This event happens after target
     
-    // PHASE 1: Legal relationships for normative clauses
+    // Legal relationships for normative clauses
     | 'amends'          // This norm amends target norm
     | 'supersedes'      // This norm replaces target norm
     | 'refersTo'        // This norm references target norm/fact
     | 'dependentOn';    // This norm depends on target norm/fact
     
   target: string;       // @id of target event
-  strength: number;     // 0-1 relationship strength
-  description?: string; // Human-readable description
+  strength?: number;    // 0-1 relationship strength (defaults to source event confidence)
+  confidence?: number;  // 0-1 confidence in relationship (defaults to relationship evidence)
+  description?: string; // Optional explanation
 }
 
-export interface EventMetadata {
-  source: {
-    name: string;
-    type: 'NewsAgency' | 'Government' | 'Corporate' | 'Academic' | 'Social';
-    url?: string;
+/**
+ * Calculate the depth of an event (recursively)
+ */
+export async function calculateDepth(
+  event: Event,
+  loader: (logicalId: string, version?: string) => Promise<Event | null>
+): Promise<number> {
+  if (!isComposite(event)) {
+    return 0; // Leaf event
+  }
+
+  let maxDepth = 0;
+  const visited = new Set<string>();
+  
+  for (const component of event.components || []) {
+    // Prevent infinite recursion
+    const key = `${component.logicalId}${component.version ? `@${component.version}` : ''}`;
+    if (visited.has(key)) {
+      continue;
+    }
+    visited.add(key);
     
-    // PHASE 1: Legal source hierarchy for kind='norm'
-    legalType?: 'constitution' | 'statute' | 'regulation' | 'case-law' | 'contract' | 'policy';
-  };
-  author: string;
+    const childEvent = await loader(component.logicalId, component.version);
+    if (childEvent) {
+      const childDepth = await calculateDepth(childEvent, loader);
+      maxDepth = Math.max(maxDepth, childDepth);
+    }
+  }
   
-  // NEVER set these manually - always calculated
-  confidence?: number;     // 0-1, = (1-V) × E × S
-  volatility?: number;     // 0-1, calculated from change history
-  sourceScore?: number;    // 0-1, from source.type (for kind='fact')
-  legalHierarchyWeight?: number; // 0-1, for kind='norm' (replaces sourceScore)
-  
-  // Additional metadata
-  tags?: string[];
-  classification?: string;
-  verifiedBy?: string[];
-}
-
-export interface Event {
-  "@context": "https://schema.org/";
-  "@type": "Event";  // Generic event type
-  "@id": string;  // SHA-256 hash of content (ONLY identifier)
-  
-  // Event versioning (trackable via commits)
-  logicalId: string;  // Logical event identifier (UUID v4)
-  version: string;    // Semantic version (1.0, 1.1, etc.)
-  previousVersion?: string;  // @id of previous version
-  commitHash: string;
-  
-  // Core content
-  title: string;  // Generic title (not just news headline)
-  description?: string;  // Optional detailed description
-  dateOccurred: string;  // When the event actually happened (ISO 8601)
-  dateRecorded: string;  // When we recorded it (ISO 8601)
-  dateModified?: string;
-  
-  // PHASE 1: Event kind - fact (default) or norm (legal clause)
-  kind?: 'fact' | 'norm';  // Default: 'fact' for existing events
-  
-  // Unified logical statement (can be simple SVO or complex logical structure)
-  statement: Statement;
-  
-  // Context and modifiers - STANDARDIZED
-  modifiers: {
-    temporal?: TemporalModifier;    // When, duration, frequency
-    spatial?: SpatialModifier;      // Where, location, scope
-    manner?: MannerModifier;        // How, method, style
-    degree?: DegreeModifier;        // Extent, intensity, amount
-    purpose?: PurposeModifier;      // Why, intention, goal
-    condition?: ConditionalModifier; // If, unless, conditional
-    certainty?: CertaintyModifier;   // Confidence, evidence, reliability
-    legal?: LegalModifier;          // PHASE 1: Jurisdiction, effectiveDate, normForce
-  };
-  
-  // Inter-event relationships
-  relationships?: EventRelationship[];
-  
-  // Event metadata and provenance
-  metadata: EventMetadata;
+  return maxDepth + 1;
 }
 
 /**
- * Component reference supporting both logical ID (latest) and version-specific modes
+ * Derive confidence formula for composite events
  */
-export interface ComponentRef {
-  logicalId: string;      // Always required - groups event versions
-  version?: string;       // Optional - if specified, pins to specific version
-                         // If omitted, always resolves to latest version
-}
+export async function deriveConfidenceFormula(
+  event: Event,
+  loader: (logicalId: string, version?: string) => Promise<Event | null>
+): Promise<string> {
+  if (!isComposite(event)) {
+    return `${event.metadata.confidence?.toFixed(3) || '0.000'}`;
+  }
 
-/**
- * Validation matrix entry for pre-merge conflict detection
- */
-export interface AggregationConstraint {
-  logic: 'AND' | 'OR' | 'ORDERED_ALL' | 'CUSTOM';
-  requirements: string[];           // Must satisfy conditions
-  conflicts: string[];             // Typical conflict patterns
-  validationFn?: (components: Event[], macro: MacroEvent) => boolean;
-}
-
-/**
- * PHASE 2: Composite Event (L2) - MacroEvent
- * 
- * Represents a higher-level narrative composed of multiple atomic events.
- * Supports aggregation logic for confidence calculation and complex
- * logical relationships between component events.
- */
-export interface MacroEvent extends Omit<Event, "@type"> {
-  "@type": "MacroEvent";  // Discriminator for composite events
+  const componentFormulas: string[] = [];
   
-  // Components - flexible references supporting version control
-  components: ComponentRef[];   // Array of component references
+  for (const component of event.components || []) {
+    const childEvent = await loader(component.logicalId, component.version);
+    if (childEvent) {
+      if (component.weak) {
+        // Weak dependencies don't contribute to formula
+        continue;
+      }
+      
+      const childFormula = await deriveConfidenceFormula(childEvent, loader);
+      componentFormulas.push(childFormula);
+    }
+  }
   
-  // Aggregation logic for confidence calculation  
-  aggregation?: 'AND' | 'OR' | 'ORDERED_ALL' | 'CUSTOM'; // Renamed for clarity
+  if (componentFormulas.length === 0) {
+    return `${event.metadata.confidence?.toFixed(3) || '0.000'}`;
+  }
   
-  // Timeline span for UI visualization
-  timelineSpan?: {
-    start: string;  // ISO 8601
-    end: string;    // ISO 8601
-  };
-  
-  // Custom aggregation rule (for CUSTOM logic)
-  customRuleId?: string;  // Reference to validation script
-  
-  // Human-readable summary of the composite event
-  summary?: string;
-  
-  // Enhanced labels and importance for filtering
-  labels?: string[];      // Subject tags  
-  importance?: 1 | 2 | 3 | 4 | 5;  // Priority dimension separate from confidence
-  
-  // The statement must be a LogicalClause for composite events
-  statement: LogicalClause;  // Cannot be simple SVO
+  // Format based on aggregation logic
+  switch (event.aggregation || 'ALL') {
+    case 'ALL':
+      return `min(${componentFormulas.join(', ')})`;
+    case 'ANY':
+      return `max(${componentFormulas.join(', ')})`;
+    case 'ORDERED':
+      return `sequence(${componentFormulas.join(' → ')})`;
+    case 'CUSTOM':
+      return `custom(${componentFormulas.join(', ')})`;
+    default:
+      return `all(${componentFormulas.join(', ')})`;
+  }
 }

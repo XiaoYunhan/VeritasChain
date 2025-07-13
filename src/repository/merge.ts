@@ -19,10 +19,10 @@ import type {
   EntityObject,
   ActionObject,
   Event,
-  MacroEvent,
   ComponentRef,
   Statement
 } from '../types/index.js';
+import { isComposite } from '../types/event.js';
 import { calculateCommitHash, calculateTreeHash } from '../core/hash.js';
 
 // Merge operation types
@@ -40,13 +40,13 @@ export type ConflictType =
   | 'statement'      // Conflicting logical statements
   | 'metadata'       // Metadata conflicts (confidence, etc.)
   | 'version'        // Version numbering conflicts
-  | 'component'      // MacroEvent component conflicts
-  | 'aggregation';   // MacroEvent aggregation logic conflicts
+  | 'component'      // Composite event component conflicts
+  | 'aggregation';   // Composite event aggregation logic conflicts
 
 export interface MergeConflict {
   type: ConflictType;
   logicalId: string;      // Logical ID of conflicting object
-  objectType: 'entity' | 'action' | 'event' | 'macroEvent';
+  objectType: 'entity' | 'action' | 'event';
   property?: string;      // Specific property in conflict
   
   // Three-way conflict values
@@ -315,11 +315,11 @@ export class MergeManager {
     const changes = {
       entities: new Map<string, { base?: string; ours?: string; theirs?: string }>(),
       actions: new Map<string, { base?: string; ours?: string; theirs?: string }>(),
-      events: new Map<string, { base?: string; ours?: string; theirs?: string }>(),
-      macroEvents: new Map<string, { base?: string; ours?: string; theirs?: string }>()
+      events: new Map<string, { base?: string; ours?: string; theirs?: string }>()
     };
 
     // Collect all logical IDs from all trees
+    // Note: MacroEvents are now unified with Events, so no separate processing needed
     const allLogicalIds = {
       entities: new Set([
         ...Object.keys(baseTree.entries.entities),
@@ -334,9 +334,8 @@ export class MergeManager {
       events: new Set([
         ...Object.keys(baseTree.entries.events),
         ...Object.keys(ourTree.entries.events),
-        ...Object.keys(theirTree.entries.events)
-      ]),
-      macroEvents: new Set([
+        ...Object.keys(theirTree.entries.events),
+        // Include any legacy macroEvents in the events processing
         ...Object.keys(baseTree.entries.macroEvents || {}),
         ...Object.keys(ourTree.entries.macroEvents || {}),
         ...Object.keys(theirTree.entries.macroEvents || {})
@@ -362,17 +361,9 @@ export class MergeManager {
 
     for (const logicalId of allLogicalIds.events) {
       changes.events.set(logicalId, {
-        base: baseTree.entries.events[logicalId],
-        ours: ourTree.entries.events[logicalId],
-        theirs: theirTree.entries.events[logicalId]
-      });
-    }
-
-    for (const logicalId of allLogicalIds.macroEvents) {
-      changes.macroEvents.set(logicalId, {
-        base: baseTree.entries.macroEvents?.[logicalId],
-        ours: ourTree.entries.macroEvents?.[logicalId],
-        theirs: theirTree.entries.macroEvents?.[logicalId]
+        base: baseTree.entries.events[logicalId] || baseTree.entries.macroEvents?.[logicalId],
+        ours: ourTree.entries.events[logicalId] || ourTree.entries.macroEvents?.[logicalId],
+        theirs: theirTree.entries.events[logicalId] || theirTree.entries.macroEvents?.[logicalId]
       });
     }
 
@@ -406,11 +397,8 @@ export class MergeManager {
       conflicts.push(...eventConflicts);
     }
 
-    // Check MacroEvent conflicts
-    for (const [logicalId, versions] of mergeContext.macroEvents) {
-      const macroEventConflicts = await this.detectMacroEventConflicts(logicalId, versions);
-      conflicts.push(...macroEventConflicts);
-    }
+    // Note: Composite event conflicts are now handled in the event conflicts section above
+    // since MacroEvents are now unified with Events
 
     return conflicts;
   }
@@ -566,23 +554,9 @@ export class MergeManager {
   }
 
   /**
-   * Detect conflicts in event objects
+   * Detect conflicts in event objects (including composite events)
    */
   private async detectEventConflicts(
-    logicalId: string,
-    versions: { base?: string; ours?: string; theirs?: string }
-  ): Promise<MergeConflict[]> {
-    // Complex implementation needed for:
-    // - Statement conflicts (SVO vs LogicalClause)
-    // - Relationship conflicts
-    // - Metadata conflicts (confidence, etc.)
-    return []; // Simplified for now
-  }
-
-  /**
-   * Detect conflicts in MacroEvent objects
-   */
-  private async detectMacroEventConflicts(
     logicalId: string,
     versions: { base?: string; ours?: string; theirs?: string }
   ): Promise<MergeConflict[]> {
@@ -598,38 +572,70 @@ export class MergeManager {
       return conflicts;
     }
 
-    // Load MacroEvent objects for comparison
-    const [baseMacroEvent, ourMacroEvent, theirMacroEvent] = await Promise.all([
-      versions.base ? this.storage.macroEvents.retrieve(versions.base) : null,
-      this.storage.macroEvents.retrieve(versions.ours),
-      this.storage.macroEvents.retrieve(versions.theirs)
+    // Load Event objects for comparison
+    const [baseEvent, ourEvent, theirEvent] = await Promise.all([
+      versions.base ? this.storage.events.retrieve(versions.base) : null,
+      this.storage.events.retrieve(versions.ours),
+      this.storage.events.retrieve(versions.theirs)
     ]);
 
-    if (!ourMacroEvent || !theirMacroEvent) {
+    if (!ourEvent || !theirEvent) {
       return conflicts; // Cannot compare if objects don't exist
     }
 
-    // Compare MacroEvent-specific properties
-    const macroEventConflicts = this.compareMacroEventProperties(
-      logicalId,
-      baseMacroEvent,
-      ourMacroEvent,
-      theirMacroEvent
-    );
+    // Check if either event is composite and handle accordingly
+    const ourIsComposite = isComposite(ourEvent);
+    const theirIsComposite = isComposite(theirEvent);
     
-    conflicts.push(...macroEventConflicts);
+    // Detect structural change from leaf to composite or vice versa
+    if (ourIsComposite !== theirIsComposite) {
+      conflicts.push({
+        type: 'structural',
+        logicalId,
+        objectType: 'event',
+        base: baseEvent ? isComposite(baseEvent) : undefined,
+        ours: ourIsComposite,
+        theirs: theirIsComposite,
+        description: `Event structure conflict: ${ourIsComposite ? 'composite' : 'leaf'} vs ${theirIsComposite ? 'composite' : 'leaf'}`,
+        severity: 'critical',
+        autoResolvable: false,
+        suggestedResolution: 'manual',
+        resolutionReason: 'Structural change from leaf to composite event requires manual resolution'
+      });
+    }
+
+    // Handle composite event specific conflicts
+    if (ourIsComposite && theirIsComposite) {
+      const compositeConflicts = this.compareCompositeEventProperties(
+        logicalId,
+        baseEvent,
+        ourEvent,
+        theirEvent
+      );
+      conflicts.push(...compositeConflicts);
+    }
+
+    // Common event property conflicts (title, statement, relationships, etc.)
+    const commonConflicts = this.compareCommonEventProperties(
+      logicalId,
+      baseEvent,
+      ourEvent,
+      theirEvent
+    );
+    conflicts.push(...commonConflicts);
 
     return conflicts;
   }
 
+
   /**
-   * Compare MacroEvent properties to detect conflicts
+   * Compare composite event properties to detect conflicts
    */
-  private compareMacroEventProperties(
+  private compareCompositeEventProperties(
     logicalId: string,
-    base: MacroEvent | null,
-    ours: MacroEvent,
-    theirs: MacroEvent
+    base: Event | null,
+    ours: Event,
+    theirs: Event
   ): MergeConflict[] {
     const conflicts: MergeConflict[] = [];
 
@@ -638,7 +644,7 @@ export class MergeManager {
       conflicts.push({
         type: 'aggregation',
         logicalId,
-        objectType: 'macroEvent',
+        objectType: 'event',
         property: 'aggregation',
         base: base?.aggregation,
         ours: ours.aggregation,
@@ -655,8 +661,8 @@ export class MergeManager {
     const componentConflicts = this.compareComponentReferences(
       logicalId,
       base?.components || [],
-      ours.components,
-      theirs.components
+      ours.components || [],
+      theirs.components || []
     );
     conflicts.push(...componentConflicts);
 
@@ -666,12 +672,12 @@ export class MergeManager {
         conflicts.push({
           type: 'content',
           logicalId,
-          objectType: 'macroEvent',
+          objectType: 'event',
           property: 'timelineSpan',
           base: base?.timelineSpan,
           ours: ours.timelineSpan,
           theirs: theirs.timelineSpan,
-          description: `Timeline span conflict for MacroEvent ${logicalId}`,
+          description: `Timeline span conflict for composite event ${logicalId}`,
           severity: 'medium',
           autoResolvable: true,
           suggestedResolution: 'merge',
@@ -685,7 +691,7 @@ export class MergeManager {
       conflicts.push({
         type: 'content',
         logicalId,
-        objectType: 'macroEvent',
+        objectType: 'event',
         property: 'customRuleId',
         base: base?.customRuleId,
         ours: ours.customRuleId,
@@ -703,7 +709,7 @@ export class MergeManager {
       conflicts.push({
         type: 'metadata',
         logicalId,
-        objectType: 'macroEvent',
+        objectType: 'event',
         property: 'importance',
         base: base?.importance,
         ours: ours.importance,
@@ -713,6 +719,76 @@ export class MergeManager {
         autoResolvable: true,
         suggestedResolution: 'ours', // Default to higher importance
         resolutionReason: 'Importance levels can be resolved by taking the higher value'
+      });
+    }
+
+    return conflicts;
+  }
+
+  /**
+   * Compare common event properties (applicable to both leaf and composite events)
+   */
+  private compareCommonEventProperties(
+    logicalId: string,
+    base: Event | null,
+    ours: Event,
+    theirs: Event
+  ): MergeConflict[] {
+    const conflicts: MergeConflict[] = [];
+
+    // Check title conflicts
+    if (ours.title !== theirs.title) {
+      conflicts.push({
+        type: 'content',
+        logicalId,
+        objectType: 'event',
+        property: 'title',
+        base: base?.title,
+        ours: ours.title,
+        theirs: theirs.title,
+        description: `Event title conflict: "${ours.title}" vs "${theirs.title}"`,
+        severity: 'medium',
+        autoResolvable: false,
+        suggestedResolution: 'manual',
+        resolutionReason: 'Title changes may reflect different interpretations'
+      });
+    }
+
+    // Check statement conflicts (for leaf events)
+    if (!isComposite(ours) && !isComposite(theirs)) {
+      if (JSON.stringify(ours.statement) !== JSON.stringify(theirs.statement)) {
+        conflicts.push({
+          type: 'statement',
+          logicalId,
+          objectType: 'event',
+          property: 'statement',
+          base: base?.statement,
+          ours: ours.statement,
+          theirs: theirs.statement,
+          description: `Event statement conflict`,
+          severity: 'critical',
+          autoResolvable: false,
+          suggestedResolution: 'manual',
+          resolutionReason: 'Statement changes affect logical meaning'
+        });
+      }
+    }
+
+    // Check relationship conflicts
+    if (JSON.stringify(ours.relationships) !== JSON.stringify(theirs.relationships)) {
+      conflicts.push({
+        type: 'relationship',
+        logicalId,
+        objectType: 'event',
+        property: 'relationships',
+        base: base?.relationships,
+        ours: ours.relationships,
+        theirs: theirs.relationships,
+        description: `Event relationships conflict`,
+        severity: 'medium',
+        autoResolvable: true,
+        suggestedResolution: 'merge',
+        resolutionReason: 'Relationships can be merged if non-conflicting'
       });
     }
 
@@ -754,7 +830,7 @@ export class MergeManager {
           conflicts.push({
             type: 'component',
             logicalId,
-            objectType: 'macroEvent',
+            objectType: 'event',
             property: `components[${componentId}]`,
             base: baseComponent,
             ours: ourComponent,
@@ -771,7 +847,7 @@ export class MergeManager {
         conflicts.push({
           type: 'component',
           logicalId,
-          objectType: 'macroEvent',
+          objectType: 'event',
           property: `components[${componentId}]`,
           base: baseComponent,
           ours: undefined,
@@ -786,7 +862,7 @@ export class MergeManager {
         conflicts.push({
           type: 'component',
           logicalId,
-          objectType: 'macroEvent',
+          objectType: 'event',
           property: `components[${componentId}]`,
           base: baseComponent,
           ours: undefined, // We implicitly kept base version
@@ -871,22 +947,22 @@ export class MergeManager {
         if (conflict.property === 'description') {
           return true; // Can merge descriptions
         }
-        // Timeline span merging for MacroEvents
-        if (conflict.property === 'timelineSpan' && conflict.objectType === 'macroEvent') {
+        // Timeline span merging for composite events
+        if (conflict.property === 'timelineSpan' && conflict.objectType === 'event') {
           return true; // Can merge timeline spans using union
         }
         break;
         
       case 'metadata':
-        // Importance level resolution for MacroEvents
-        if (conflict.property === 'importance' && conflict.objectType === 'macroEvent') {
+        // Importance level resolution for composite events
+        if (conflict.property === 'importance' && conflict.objectType === 'event') {
           return true; // Can resolve by taking higher importance
         }
         break;
         
       case 'component':
-        // Component reference resolution for MacroEvents
-        if (conflict.objectType === 'macroEvent') {
+        // Component reference resolution for composite events
+        if (conflict.objectType === 'event') {
           // Check if we can auto-resolve based on version preferences
           return this.canAutoResolveComponentRef(conflict.ours as ComponentRef, conflict.theirs as ComponentRef);
         }
@@ -936,13 +1012,7 @@ export class MergeManager {
       }
     }
 
-    // Merge MacroEvents
-    for (const [logicalId, versions] of mergeContext.macroEvents) {
-      const resolvedVersion = this.resolveVersion(logicalId, versions, conflicts, 'macroEvent');
-      if (resolvedVersion) {
-        mergedEntries.macroEvents[logicalId] = resolvedVersion;
-      }
-    }
+    // Note: Composite events are now merged as part of unified Events above
 
     // Create merged tree
     const mergedTree: Omit<Tree, '@id'> = {

@@ -40,6 +40,22 @@ const NORM_FORCE_FACTORS = {
     'advisory': 0.4 // Guidance only
 };
 export class ConfidenceCalculator {
+    /**
+     * Map new aggregation logic to old format for backward compatibility
+     */
+    mapAggregationLogic(logic) {
+        const mapping = {
+            'ALL': 'AND',
+            'ANY': 'OR',
+            'ORDERED': 'ORDERED_ALL',
+            'CUSTOM': 'CUSTOM',
+            // Backward compatibility
+            'AND': 'AND',
+            'OR': 'OR',
+            'ORDERED_ALL': 'ORDERED_ALL'
+        };
+        return mapping[logic] || 'AND';
+    }
     // Calculate volatility from change history
     calculateVolatility(changeHistory) {
         if (changeHistory.length < 2)
@@ -121,7 +137,7 @@ export class ConfidenceCalculator {
         }
         // Cache miss or no cache - calculate confidence
         const componentConfidences = await Promise.all(componentHashes.map(hash => getComponentConfidence(hash)));
-        const calculation = this.aggregateConfidence(componentConfidences, macro.aggregation || 'AND', undefined // TODO: Load custom aggregator by macro.customRuleId
+        const calculation = this.aggregateConfidence(componentConfidences, this.mapAggregationLogic(macro.aggregation || 'ALL'), undefined // TODO: Load custom aggregator by macro.customRuleId
         );
         // Store in cache if provided
         if (cache) {

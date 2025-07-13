@@ -57,6 +57,7 @@ export interface CreateEventParams {
     legalType?: 'constitution' | 'statute' | 'regulation' | 'case-law' | 'contract' | 'policy';
   };
   author: string;
+  version?: string;  // Default to '1.0' if not provided
 }
 
 export interface UpdateEventParams {
@@ -153,6 +154,7 @@ export class EventRepository {
       metadata: {
         source: params.source,
         author: params.author,
+        version: params.version || '1.0',
         // AUTO-CALCULATED fields
         confidence: confidenceCalc.result,
         volatility: confidenceCalc.factors.volatility,
@@ -251,6 +253,7 @@ export class EventRepository {
       metadata: {
         source: updatedSource,
         author: params.author ?? currentEvent.metadata.author,
+        version: newVersion,
         // AUTO-CALCULATED fields (recalculated)
         confidence: confidenceCalc.result,
         volatility: confidenceCalc.factors.volatility,

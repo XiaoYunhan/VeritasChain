@@ -38,6 +38,10 @@ declare const NORM_FORCE_FACTORS: {
     readonly advisory: 0.4;
 };
 export declare class ConfidenceCalculator {
+    /**
+     * Map new aggregation logic to old format for backward compatibility
+     */
+    private mapAggregationLogic;
     calculateVolatility(changeHistory: EventChange[]): number;
     calculate(params: {
         changeHistory: EventChange[];

@@ -52,6 +52,23 @@ const NORM_FORCE_FACTORS = {
 } as const;
 
 export class ConfidenceCalculator {
+  /**
+   * Map new aggregation logic to old format for backward compatibility
+   */
+  private mapAggregationLogic(logic: string): 'AND' | 'OR' | 'CUSTOM' | 'ORDERED_ALL' {
+    const mapping: Record<string, 'AND' | 'OR' | 'CUSTOM' | 'ORDERED_ALL'> = {
+      'ALL': 'AND',
+      'ANY': 'OR',
+      'ORDERED': 'ORDERED_ALL',
+      'CUSTOM': 'CUSTOM',
+      // Backward compatibility
+      'AND': 'AND',
+      'OR': 'OR',
+      'ORDERED_ALL': 'ORDERED_ALL'
+    };
+    return mapping[logic] || 'AND';
+  }
+
   // Calculate volatility from change history
   calculateVolatility(changeHistory: EventChange[]): number {
     if (changeHistory.length < 2) return 0;
@@ -161,7 +178,7 @@ export class ConfidenceCalculator {
     
     const calculation = this.aggregateConfidence(
       componentConfidences,
-      macro.aggregation || 'AND',
+      this.mapAggregationLogic(macro.aggregation || 'ALL'),
       undefined // TODO: Load custom aggregator by macro.customRuleId
     );
     

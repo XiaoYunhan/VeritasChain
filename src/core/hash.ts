@@ -133,7 +133,6 @@ export function calculateMacroEventHash(macro: Omit<import('../types/event.js').
     aggregation: macro.aggregation,
     timelineSpan: macro.timelineSpan,
     summary: macro.summary,
-    labels: macro.labels,
     importance: macro.importance,
     modifiers: macro.modifiers,
     relationships: macro.relationships,

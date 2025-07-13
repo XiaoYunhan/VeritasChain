@@ -34,6 +34,7 @@ export interface CreateEventParams {
         legalType?: 'constitution' | 'statute' | 'regulation' | 'case-law' | 'contract' | 'policy';
     };
     author: string;
+    version?: string;
 }
 export interface UpdateEventParams {
     logicalId: string;

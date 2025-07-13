@@ -9,8 +9,8 @@
     "dev": "nodemon --exec 'npm run build && node dist/index.js'",
     "start": "node dist/index.js",
     
-    "test": "npm run build && jest",
-    "test:unit": "npm run build && jest tests/unit",
+    "test": "npm run build && NODE_OPTIONS='--max-old-space-size=4096' jest",
+    "test:unit": "npm run build && NODE_OPTIONS='--max-old-space-size=4096' jest tests/unit",
     "test:integration": "npm run build && jest tests/integration",
     "test:coverage": "npm run build && jest --coverage",
     "test:watch": "jest --watch",
@@ -24,6 +24,10 @@
     
     "test:legacy": "npm run build && node tests/storage-integration.js",
     "test:legacy:force": "npm run build && node tests/storage-integration.js --force",
+    
+    "migrate:check": "npm run build && ts-node scripts/checkMacroEvents.ts",
+    "migrate:dry-run": "npm run build && ts-node scripts/migrateMacro.ts --dry-run --verbose",
+    "migrate:run": "npm run build && ts-node scripts/migrateMacro.ts --backup --verbose",
     
     "lint": "tsc --noEmit",
     "clean": "rm -rf dist coverage"

@@ -408,22 +408,24 @@ interface Source {
   legalType?: 'constitution' | 'statute' | 'regulation' | 'case-law' | 'contract' | 'policy';
 }
 
-// PHASE 2: Composite Event (L2) - MacroEvent
-interface MacroEvent extends Event {
-  "@type": "MacroEvent";  // Discriminator for composite events
-  
-  // Components - direct references to sub-events
-  components: string[];   // Array of Event @id hashes
-  
-  // Aggregation logic for confidence calculation
-  aggregationLogic?: 'AND' | 'OR' | 'SEQUENCE' | 'CUSTOM';
-  
-  // Human-readable summary of the composite event
-  summary?: string;
-  
-  // The statement must be a LogicalClause for composite events
-  statement: LogicalClause;  // Cannot be simple SVO
+// UNIFIED EVENT MODEL: Events can now be composite by having components
+// No separate MacroEvent interface needed - use isComposite(event) helper
+// All events are now handled through the unified Event interface:
+
+interface ComponentRef {
+  logicalId: string;    // Reference to logical entity
+  version?: string;     // Optional version lock (defaults to latest)
+  weak?: boolean;       // If true, ignore in confidence aggregation
 }
+
+// Event interface now supports composite events via optional fields:
+// - components?: ComponentRef[]     // Presence indicates composite event
+// - aggregation?: 'ALL' | 'ANY' | 'ORDERED' | 'CUSTOM'
+// - customRuleId?: string          // For CUSTOM aggregation logic
+// - depth?: number                 // System-calculated expansion depth
+// - summary?: string               // Human-readable summary
+
+// Use isComposite(event) helper to check if event is composite
 
 // Example MacroEvent:
 /*
@@ -877,15 +879,18 @@ POST   /v1/actions                      # Add action to staging
 GET    /v1/actions/:hash                # Get action by @id hash
 GET    /v1/actions/logical/:id/history  # Get action version history
 
-POST   /v1/events                       # Add event to staging
-GET    /v1/events/:hash                 # Get event by @id hash
-GET    /v1/events/logical/:id/history   # Get event version history
+# Unified Event operations (supports both leaf and composite events)
+POST   /v1/events                       # Add Event (leaf or composite) to staging
+GET    /v1/events/:hash                 # Get Event by @id hash
+GET    /v1/events/:hash/depth          # Get recursive depth for composite events
+GET    /v1/events/:hash/formula        # Get confidence aggregation formula
+GET    /v1/events/logical/:id          # Get latest Event version
+GET    /v1/events/logical/:id/history  # Get Event version history
 
-# PHASE 2: MacroEvent operations
-POST   /v1/macro-events                 # Add MacroEvent to staging
-GET    /v1/macro-events/:hash           # Get MacroEvent by @id hash
-GET    /v1/macro-events/logical/:id     # Get latest MacroEvent version
-GET    /v1/macro-events/logical/:id/history # Get MacroEvent version history
+# Legacy MacroEvent redirects (deprecated)
+POST   /v1/macro-events                # Redirects to /v1/events with transformation
+GET    /v1/macro-events/:hash          # Redirects to /v1/events/:hash (301)
+GET    /v1/macro-events/logical/:id    # Redirects to /v1/events/logical/:id (301)
 
 # Repository operations (consistent naming)
 POST   /v1/commits                      # Create commit

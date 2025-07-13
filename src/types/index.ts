@@ -20,7 +20,19 @@ export type {
 } from './modifiers.js';
 
 // Event types
-export type { Event, MacroEvent, ComponentRef, EventRelationship, EventMetadata } from './event.js';
+export type { 
+  Event, 
+  ComponentRef, 
+  EventRelationship, 
+  EventMetadata,
+  AggregationLogic,
+  Modifiers,
+  // Backward compatibility
+  MacroEvent  
+} from './event.js';
+
+// Event helper functions
+export { isComposite, getEventType, migrateMacroEvent } from './event.js';
 
 // Version control types
 export type { Commit, Tree, Branch, Repository } from './commit.js';

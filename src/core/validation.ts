@@ -6,17 +6,27 @@
  * validates component events for common conflict patterns.
  */
 
-import type { Event, MacroEvent, ComponentRef, AggregationConstraint } from '../types/event.js';
+import type { Event, ComponentRef } from '../types/event.js';
 
 // Confidence threshold for validation (configurable)
 const CONFIDENCE_THRESHOLD = 0.5;
 
 /**
+ * Aggregation constraint definition
+ */
+interface AggregationConstraint {
+  logic: string;
+  requirements: string[];
+  conflicts: string[];
+  validationFn: (components: Event[], macro: Event) => boolean;
+}
+
+/**
  * Validation matrix defining constraints for each aggregation type
  */
 const AGGREGATION_CONSTRAINTS: Record<string, AggregationConstraint> = {
-  'AND': {
-    logic: 'AND',
+  'ALL': {
+    logic: 'ALL',
     requirements: ['All components must have confidence > threshold'],
     conflicts: ['Components with contradicts relationships', 'Prevented events'],
     validationFn: (components, macro) => {
@@ -42,8 +52,8 @@ const AGGREGATION_CONSTRAINTS: Record<string, AggregationConstraint> = {
     }
   },
   
-  'OR': {
-    logic: 'OR',
+  'ANY': {
+    logic: 'ANY',
     requirements: ['At least one component must have confidence > threshold'],
     conflicts: ['All components prevented by external events'],
     validationFn: (components, macro) => {
@@ -63,8 +73,8 @@ const AGGREGATION_CONSTRAINTS: Record<string, AggregationConstraint> = {
     }
   },
   
-  'ORDERED_ALL': {
-    logic: 'ORDERED_ALL',
+  'ORDERED': {
+    logic: 'ORDERED',
     requirements: ['Components must have strictly increasing dateOccurred', 'No temporal gaps > threshold'],
     conflicts: ['Overlapping time periods', 'Missing sequence steps'],
     validationFn: (components, macro) => {
@@ -129,11 +139,11 @@ export class MacroEventValidator {
    * Returns validation result with specific error messages
    */
   async preMergeValidate(
-    macro: MacroEvent, 
+    macro: Event, 
     getEvent: (ref: ComponentRef) => Promise<Event | null>
   ): Promise<ValidationResult> {
     
-    const constraint = AGGREGATION_CONSTRAINTS[macro.aggregation || 'AND'];
+    const constraint = AGGREGATION_CONSTRAINTS[macro.aggregation || 'ALL'];
     const errors: string[] = [];
     const warnings: string[] = [];
     

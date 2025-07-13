@@ -13,22 +13,24 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import type { 
   Event, 
-  MacroEvent, 
   ComponentRef, 
-  EventMetadata 
+  EventMetadata
+} from '../types/event.js';
+import { 
+  isComposite,
+  calculateDepth,
+  deriveConfidenceFormula
 } from '../types/event.js';
 import type { EntityObject, ActionObject } from '../types/entity.js';
 import type { Statement } from '../types/statement.js';
 import { LocalStorageAdapter } from '../adapters/local.js';
 import type { StorageConfig } from '../adapters/interfaces.js';
 import { confidenceCalculator } from '../core/confidence.js';
-import { macroEventValidator } from '../core/validation.js';
 import { confidenceCache } from '../core/confidence-cache.js';
 import { 
   calculateEntityHash, 
   calculateActionHash, 
-  calculateEventHash,
-  calculateMacroEventHash
+  calculateEventHash
 } from '../core/hash.js';
 import { BranchManager } from '../repository/branch.js';
 import { MergeManager } from '../repository/merge.js';
@@ -268,10 +270,50 @@ app.post('/v1/events', async (req: Request, res: Response, next: NextFunction) =
   try {
     const eventInput: Omit<Event, '@id'> = req.body;
     
-    if (!eventInput.logicalId || !eventInput.title || !eventInput.statement) {
-      const error: ApiError = new Error('Missing required fields: logicalId, title, statement');
+    if (!eventInput.logicalId || !eventInput.title) {
+      const error: ApiError = new Error('Missing required fields: logicalId, title');
       error.status = 400;
       throw error;
+    }
+    
+    // Composite events need components, leaf events need statement
+    const isCompositeEvent = eventInput.components && eventInput.components.length > 0;
+    if (isCompositeEvent) {
+      if (!eventInput.aggregation) {
+        const error: ApiError = new Error('Composite events require aggregation field');
+        error.status = 400;
+        throw error;
+      }
+    } else {
+      if (!eventInput.statement) {
+        const error: ApiError = new Error('Leaf events require statement field');
+        error.status = 400;
+        throw error;
+      }
+    }
+    
+    // Validate component references for composite events
+    if (isCompositeEvent) {
+      for (const component of eventInput.components!) {
+        if (!component.logicalId) {
+          const error: ApiError = new Error('Component references must have logicalId');
+          error.status = 400;
+          throw error;
+        }
+        
+        // Check if referenced event exists
+        const targetEvent = component.version ?
+          await store.events.findByLogicalId(component.logicalId).then(events => 
+            events.find(e => e.version === component.version) || null
+          ) :
+          await store.events.getLatestVersion(component.logicalId);
+          
+        if (!targetEvent) {
+          const error: ApiError = new Error(`Referenced component not found: ${component.logicalId}${component.version ? ` version ${component.version}` : ''}`);
+          error.status = 400;
+          throw error;
+        }
+      }
     }
     
     const hash = calculateEventHash(eventInput);
@@ -286,6 +328,8 @@ app.post('/v1/events', async (req: Request, res: Response, next: NextFunction) =
       '@id': hash,
       logicalId: event.logicalId,
       version: event.version,
+      isComposite: isComposite(event),
+      componentCount: event.components?.length || 0,
       created: new Date().toISOString()
     });
   } catch (error) {
@@ -328,117 +372,137 @@ app.get('/v1/events/logical/:id/history', async (req: Request, res: Response, ne
   }
 });
 
-// ============================================================================
-// MACRO EVENT ENDPOINTS (PHASE 2)
-// ============================================================================
-
-app.post('/v1/macro-events', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const macroInput: Omit<MacroEvent, '@id'> = req.body;
-    
-    if (!macroInput.logicalId || !macroInput.title || !macroInput.components) {
-      const error: ApiError = new Error('Missing required fields: logicalId, title, components');
-      error.status = 400;
-      throw error;
-    }
-    
-    // Create temporary MacroEvent for validation (with placeholder @id)
-    const tempMacroForValidation: MacroEvent = {
-      ...macroInput,
-      '@id': 'temp-validation-id'  // Placeholder for validation
-    };
-    
-    // Pre-merge validation
-    const validation = await macroEventValidator.preMergeValidate(
-      tempMacroForValidation,
-      async (ref: ComponentRef) => {
-        const targetEvent = ref.version ?
-          await store.events.findByLogicalId(ref.logicalId).then(events => 
-            events.find(e => e.version === ref.version) || null
-          ) :
-          await store.events.getLatestVersion(ref.logicalId);
-          
-        return targetEvent;
-      }
-    );
-    
-    if (!validation.isValid) {
-      const error: ApiError = new Error(`Validation failed: ${validation.errors.join(', ')}`);
-      error.status = 400;
-      error.details = validation;
-      throw error;
-    }
-    
-    const hash = calculateMacroEventHash(macroInput);
-    const macroEvent: MacroEvent = {
-      ...macroInput,
-      '@id': hash
-    };
-    
-    await store.macroEvents.store(hash, macroEvent);
-    
-    res.status(201).json({
-      '@id': hash,
-      logicalId: macroEvent.logicalId,
-      version: macroEvent.version,
-      validation: {
-        warnings: validation.warnings,
-        componentCount: validation.componentCount
-      },
-      created: new Date().toISOString()
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-app.get('/v1/macro-events/:hash', async (req: Request, res: Response, next: NextFunction) => {
+// Event depth calculation endpoint
+app.get('/v1/events/:hash/depth', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { hash } = req.params;
-    const macroEvent = await store.macroEvents.retrieve(hash);
+    const event = await store.events.retrieve(hash);
     
-    if (!macroEvent) {
-      const error: ApiError = new Error(`MacroEvent not found: ${hash}`);
+    if (!event) {
+      const error: ApiError = new Error(`Event not found: ${hash}`);
       error.status = 404;
       throw error;
     }
     
-    res.json(macroEvent);
-  } catch (error) {
-    next(error);
-  }
-});
-
-app.get('/v1/macro-events/logical/:id', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    const macroEvent = await store.macroEvents.getLatestVersion(id);
-    
-    if (!macroEvent) {
-      const error: ApiError = new Error(`MacroEvent not found: ${id}`);
-      error.status = 404;
-      throw error;
-    }
-    
-    res.json(macroEvent);
-  } catch (error) {
-    next(error);
-  }
-});
-
-app.get('/v1/macro-events/logical/:id/history', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    const limit = parseInt(req.query.limit as string) || 50;
-    
-    const allVersions = await store.macroEvents.findByLogicalId(id);
-    const limitedVersions = allVersions.slice(-limit);
+    const depth = await calculateDepth(event, async (logicalId: string, version?: string) => {
+      return version ?
+        await store.events.findByLogicalId(logicalId).then(events => 
+          events.find(e => e.version === version) || null
+        ) :
+        await store.events.getLatestVersion(logicalId);
+    });
     
     res.json({
-      logicalId: id,
-      totalVersions: allVersions.length,
-      versions: limitedVersions
+      '@id': hash,
+      logicalId: event.logicalId,
+      title: event.title,
+      isComposite: isComposite(event),
+      depth,
+      componentCount: event.components?.length || 0
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Event confidence formula endpoint
+app.get('/v1/events/:hash/formula', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { hash } = req.params;
+    const event = await store.events.retrieve(hash);
+    
+    if (!event) {
+      const error: ApiError = new Error(`Event not found: ${hash}`);
+      error.status = 404;
+      throw error;
+    }
+    
+    const formula = await deriveConfidenceFormula(event, async (logicalId: string, version?: string) => {
+      return version ?
+        await store.events.findByLogicalId(logicalId).then(events => 
+          events.find(e => e.version === version) || null
+        ) :
+        await store.events.getLatestVersion(logicalId);
+    });
+    
+    res.json({
+      '@id': hash,
+      logicalId: event.logicalId,
+      title: event.title,
+      isComposite: isComposite(event),
+      confidence: event.metadata.confidence,
+      formula
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ============================================================================
+// LEGACY MACRO EVENT REDIRECTS (Deprecated - Use /v1/events)
+// ============================================================================
+
+// Redirect POST /v1/macro-events to /v1/events with migration
+app.post('/v1/macro-events', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Add deprecation warning header
+    res.set('Warning', '299 - "POST /v1/macro-events is deprecated. Use POST /v1/events with components field instead."');
+    
+    // Transform old MacroEvent format to new Event format
+    const macroInput = req.body;
+    const eventInput = {
+      ...macroInput,
+      '@type': 'Event',  // Convert from MacroEvent
+      aggregation: macroInput.aggregationLogic || macroInput.aggregation || 'ALL',
+      components: macroInput.components?.map((comp: any) => {
+        if (typeof comp === 'string') {
+          return { logicalId: comp };
+        }
+        return comp;
+      }) || []
+    };
+    
+    // Remove old fields
+    delete eventInput.aggregationLogic;
+    
+    // Forward to events endpoint
+    req.body = eventInput;
+    return app._router.handle({
+      ...req,
+      method: 'POST',
+      url: '/v1/events',
+      originalUrl: '/v1/events'
+    }, res, next);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Redirect GET /v1/macro-events/:hash to /v1/events/:hash
+app.get('/v1/macro-events/:hash', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.set('Warning', '299 - "GET /v1/macro-events/:hash is deprecated. Use GET /v1/events/:hash instead."');
+    res.redirect(301, `/v1/events/${req.params.hash}`);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Redirect GET /v1/macro-events/logical/:id to /v1/events/logical/:id
+app.get('/v1/macro-events/logical/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.set('Warning', '299 - "GET /v1/macro-events/logical/:id is deprecated. Use GET /v1/events/logical/:id instead."');
+    res.redirect(301, `/v1/events/logical/${req.params.id}`);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Redirect GET /v1/macro-events/logical/:id/history to /v1/events/logical/:id/history
+app.get('/v1/macro-events/logical/:id/history', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.set('Warning', '299 - "GET /v1/macro-events/logical/:id/history is deprecated. Use GET /v1/events/logical/:id/history instead."');
+    res.redirect(301, `/v1/events/logical/${req.params.id}/history`);
   } catch (error) {
     next(error);
   }
@@ -463,7 +527,7 @@ app.post('/v1/commits', async (req: Request, res: Response, next: NextFunction) 
       '@id': `sha256:${Date.now()}`,
       message,
       timestamp: new Date().toISOString(),
-      changes: changes || { events: [], entities: [], actions: [], macroEvents: [] }
+      changes: changes || { events: [], entities: [], actions: [] }
     };
     
     res.status(201).json(commit);
@@ -861,7 +925,7 @@ app.get('/v1/metadata', async (req: Request, res: Response, next: NextFunction) 
         entities: '/v1/entities',
         actions: '/v1/actions', 
         events: '/v1/events',
-        macroEvents: '/v1/macro-events',
+        macroEvents: '/v1/macro-events (deprecated - use /v1/events)',
         commits: '/v1/commits'
       }
     });
@@ -884,7 +948,7 @@ app.use('*', (req: Request, res: Response) => {
       '/v1/entities',
       '/v1/actions',
       '/v1/events',
-      '/v1/macro-events',
+      '/v1/macro-events (deprecated)',
       '/v1/commits',
       '/v1/branches',
       '/v1/merge',
