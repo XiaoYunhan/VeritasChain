@@ -809,10 +809,6 @@ The test suite demonstrates how raw news text is parsed into our structured form
 
 See [SAMPLE.md](./SAMPLE.md) for complete examples of all supported event types.
 
-## License
-
-MIT License - See LICENSE file for details
-
 ## Future Vision
 
 By 2026, this system will enable:
