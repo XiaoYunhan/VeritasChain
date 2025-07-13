@@ -350,6 +350,104 @@ class LocalEventStore extends LocalContentStore {
     }
 }
 /**
+ * Local MacroEvent store with component indexing (Phase 2)
+ */
+class LocalMacroEventStore extends LocalContentStore {
+    logicalIdIndex = new Map();
+    aggregationIndex = new Map();
+    componentIndex = new Map(); // componentId -> macroEventIds
+    constructor(baseDirectory) {
+        super(baseDirectory, 'objects/macro-events');
+    }
+    async store(id, content) {
+        await super.store(id, content);
+        await this.updateIndexes(content);
+    }
+    async forceStore(id, content) {
+        await super.forceStore(id, content);
+        await this.updateIndexes(content);
+    }
+    async findByLogicalId(logicalId) {
+        const ids = this.logicalIdIndex.get(logicalId) || [];
+        const macroEvents = await this.retrieveBatch(ids);
+        return macroEvents.filter((macro) => macro !== null);
+    }
+    async getLatestVersion(logicalId) {
+        const macroEvents = await this.findByLogicalId(logicalId);
+        if (macroEvents.length === 0)
+            return null;
+        macroEvents.sort((a, b) => this.compareVersions(a.version, b.version));
+        return macroEvents[macroEvents.length - 1];
+    }
+    async findByAggregation(aggregation) {
+        const ids = this.aggregationIndex.get(aggregation) || [];
+        const macroEvents = await this.retrieveBatch(ids);
+        return macroEvents.filter((macro) => macro !== null);
+    }
+    async findByComponent(componentId) {
+        const ids = this.componentIndex.get(componentId) || [];
+        const macroEvents = await this.retrieveBatch(ids);
+        return macroEvents.filter((macro) => macro !== null);
+    }
+    async search(query) {
+        const allIds = await this.list();
+        const macroEvents = await this.retrieveBatch(allIds);
+        return macroEvents.filter((macro) => {
+            if (!macro)
+                return false;
+            if (query.title && !macro.title.toLowerCase().includes(query.title.toLowerCase())) {
+                return false;
+            }
+            if (query.aggregation && macro.aggregation !== query.aggregation) {
+                return false;
+            }
+            if (query.importance && macro.importance !== query.importance) {
+                return false;
+            }
+            return true;
+        });
+    }
+    async updateIndexes(macro) {
+        // Logical ID index
+        const existingLogical = this.logicalIdIndex.get(macro.logicalId) || [];
+        if (!existingLogical.includes(macro['@id'])) {
+            existingLogical.push(macro['@id']);
+            this.logicalIdIndex.set(macro.logicalId, existingLogical);
+        }
+        // Aggregation index
+        if (macro.aggregation) {
+            const existingAggregation = this.aggregationIndex.get(macro.aggregation) || [];
+            if (!existingAggregation.includes(macro['@id'])) {
+                existingAggregation.push(macro['@id']);
+                this.aggregationIndex.set(macro.aggregation, existingAggregation);
+            }
+        }
+        // Component index - for each component, add this macro
+        if (macro.components) {
+            for (const componentRef of macro.components) {
+                const componentKey = `${componentRef.logicalId}${componentRef.version ? ':' + componentRef.version : ''}`;
+                const existingComponent = this.componentIndex.get(componentKey) || [];
+                if (!existingComponent.includes(macro['@id'])) {
+                    existingComponent.push(macro['@id']);
+                    this.componentIndex.set(componentKey, existingComponent);
+                }
+            }
+        }
+    }
+    compareVersions(a, b) {
+        const aParts = a.split('.').map(Number);
+        const bParts = b.split('.').map(Number);
+        for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+            const aPart = aParts[i] || 0;
+            const bPart = bParts[i] || 0;
+            if (aPart !== bPart) {
+                return aPart - bPart;
+            }
+        }
+        return 0;
+    }
+}
+/**
  * Local commit store with Git-like operations
  */
 class LocalCommitStore extends LocalContentStore {
@@ -531,6 +629,7 @@ export class LocalStorageAdapter {
     entities;
     actions;
     events;
+    macroEvents; // Phase 2 addition
     commits;
     repository;
     constructor(config) {
@@ -542,6 +641,7 @@ export class LocalStorageAdapter {
         this.entities = new LocalEntityStore(baseDir);
         this.actions = new LocalActionStore(baseDir);
         this.events = new LocalEventStore(baseDir);
+        this.macroEvents = new LocalMacroEventStore(baseDir); // Phase 2 addition
         this.commits = new LocalCommitStore(baseDir);
         this.repository = new LocalRepositoryStore(baseDir);
     }
@@ -551,6 +651,7 @@ export class LocalStorageAdapter {
         await fs.mkdir(path.join(baseDir, 'objects', 'entities'), { recursive: true });
         await fs.mkdir(path.join(baseDir, 'objects', 'actions'), { recursive: true });
         await fs.mkdir(path.join(baseDir, 'objects', 'events'), { recursive: true });
+        await fs.mkdir(path.join(baseDir, 'objects', 'macro-events'), { recursive: true }); // Phase 2 addition
         await fs.mkdir(path.join(baseDir, 'objects', 'commits'), { recursive: true });
         await fs.mkdir(path.join(baseDir, 'objects', 'trees'), { recursive: true });
         await fs.mkdir(path.join(baseDir, 'refs', 'heads'), { recursive: true });
@@ -602,16 +703,18 @@ export class LocalStorageAdapter {
         }
     }
     async getStatistics() {
-        const [entityCount, actionCount, eventCount, commitCount] = await Promise.all([
+        const [entityCount, actionCount, eventCount, macroEventCount, commitCount] = await Promise.all([
             this.entities.count(),
             this.actions.count(),
             this.events.count(),
+            this.macroEvents.count(), // Phase 2 addition
             this.commits.count()
         ]);
         return {
             entityCount,
             actionCount,
             eventCount,
+            macroEventCount,
             commitCount
         };
     }

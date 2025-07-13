@@ -28,6 +28,10 @@ export declare function calculateEventHash(event: Omit<import('../types/event.js
  */
 export declare function calculateCommitHash(commit: Omit<import('../types/commit.js').Commit, '@id'>): string;
 /**
+ * Calculate hash for MacroEvent content (Phase 2)
+ */
+export declare function calculateMacroEventHash(macro: Omit<import('../types/event.js').MacroEvent, '@id' | 'commitHash' | 'previousVersion'>): string;
+/**
  * Calculate hash for Tree content
  */
 export declare function calculateTreeHash(tree: Omit<import('../types/commit.js').Tree, '@id'>): string;

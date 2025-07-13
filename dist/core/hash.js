@@ -99,6 +99,36 @@ export function calculateCommitHash(commit) {
     return calculateHash(contentForHashing);
 }
 /**
+ * Calculate hash for MacroEvent content (Phase 2)
+ */
+export function calculateMacroEventHash(macro) {
+    // Remove calculated fields from metadata
+    const { confidence, volatility, sourceScore, legalHierarchyWeight, ...cleanMetadata } = macro.metadata;
+    const contentForHashing = {
+        '@context': macro['@context'],
+        '@type': macro['@type'],
+        logicalId: macro.logicalId,
+        version: macro.version,
+        title: macro.title,
+        description: macro.description,
+        dateOccurred: macro.dateOccurred,
+        dateRecorded: macro.dateRecorded,
+        dateModified: macro.dateModified,
+        kind: macro.kind,
+        statement: macro.statement,
+        components: macro.components,
+        aggregation: macro.aggregation,
+        timelineSpan: macro.timelineSpan,
+        summary: macro.summary,
+        labels: macro.labels,
+        importance: macro.importance,
+        modifiers: macro.modifiers,
+        relationships: macro.relationships,
+        metadata: cleanMetadata
+    };
+    return calculateHash(contentForHashing);
+}
+/**
  * Calculate hash for Tree content
  */
 export function calculateTreeHash(tree) {

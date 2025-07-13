@@ -9,6 +9,7 @@ import type {
   EntityObject, 
   ActionObject, 
   Event, 
+  MacroEvent,
   Commit, 
   Tree, 
   Branch, 
@@ -87,6 +88,28 @@ export interface EventStore extends ContentStore<Event> {
 }
 
 /**
+ * MacroEvent storage operations (Phase 2)
+ */
+export interface MacroEventStore extends ContentStore<MacroEvent> {
+  // Find by logical ID (across all versions)
+  findByLogicalId(logicalId: string): Promise<MacroEvent[]>;
+  getLatestVersion(logicalId: string): Promise<MacroEvent | null>;
+  
+  // Query by aggregation type
+  findByAggregation(aggregation: string): Promise<MacroEvent[]>;
+  
+  // Find MacroEvents containing specific component
+  findByComponent(componentId: string): Promise<MacroEvent[]>;
+  
+  // Search operations
+  search(query: {
+    title?: string;
+    aggregation?: string;
+    importance?: 1 | 2 | 3 | 4 | 5;  // Match the MacroEvent type
+  }): Promise<MacroEvent[]>;
+}
+
+/**
  * Commit and version control operations
  */
 export interface CommitStore extends ContentStore<Commit> {
@@ -134,6 +157,7 @@ export interface StorageAdapter {
   entities: EntityStore;
   actions: ActionStore;
   events: EventStore;
+  macroEvents: MacroEventStore;  // Phase 2 addition
   commits: CommitStore;
   repository: RepositoryStore;
   
@@ -150,6 +174,7 @@ export interface StorageAdapter {
     entityCount: number;
     actionCount: number;
     eventCount: number;
+    macroEventCount: number;  // Phase 2 addition
     commitCount: number;
     storageSize?: number;
   }>;

@@ -4,7 +4,7 @@
  * Abstract interfaces for storage operations with dependency injection pattern.
  * Allows seamless migration from file system (Phase 1) to blockchain (Phase 4-5).
  */
-import type { EntityObject, ActionObject, Event, Commit, Tree, Branch, Repository } from '../types/index.js';
+import type { EntityObject, ActionObject, Event, MacroEvent, Commit, Tree, Branch, Repository } from '../types/index.js';
 /**
  * Generic storage interface for content-addressed objects
  */
@@ -59,6 +59,20 @@ export interface EventStore extends ContentStore<Event> {
     }): Promise<Event[]>;
 }
 /**
+ * MacroEvent storage operations (Phase 2)
+ */
+export interface MacroEventStore extends ContentStore<MacroEvent> {
+    findByLogicalId(logicalId: string): Promise<MacroEvent[]>;
+    getLatestVersion(logicalId: string): Promise<MacroEvent | null>;
+    findByAggregation(aggregation: string): Promise<MacroEvent[]>;
+    findByComponent(componentId: string): Promise<MacroEvent[]>;
+    search(query: {
+        title?: string;
+        aggregation?: string;
+        importance?: 1 | 2 | 3 | 4 | 5;
+    }): Promise<MacroEvent[]>;
+}
+/**
  * Commit and version control operations
  */
 export interface CommitStore extends ContentStore<Commit> {
@@ -91,6 +105,7 @@ export interface StorageAdapter {
     entities: EntityStore;
     actions: ActionStore;
     events: EventStore;
+    macroEvents: MacroEventStore;
     commits: CommitStore;
     repository: RepositoryStore;
     initialize(): Promise<void>;
@@ -104,6 +119,7 @@ export interface StorageAdapter {
         entityCount: number;
         actionCount: number;
         eventCount: number;
+        macroEventCount: number;
         commitCount: number;
         storageSize?: number;
     }>;

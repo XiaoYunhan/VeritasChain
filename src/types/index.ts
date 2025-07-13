@@ -20,7 +20,7 @@ export type {
 } from './modifiers.js';
 
 // Event types
-export type { Event, EventRelationship, EventMetadata } from './event.js';
+export type { Event, MacroEvent, ComponentRef, EventRelationship, EventMetadata } from './event.js';
 
 // Version control types
 export type { Commit, Tree, Branch, Repository } from './commit.js';

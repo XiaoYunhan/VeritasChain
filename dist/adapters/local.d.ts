@@ -4,7 +4,7 @@
  * Phase 1 implementation using JSON files in .git-events/ directory.
  * Structured like Git with content-addressed storage.
  */
-import type { StorageAdapter, StorageConfig, EntityStore, ActionStore, EventStore, CommitStore, RepositoryStore } from './interfaces.js';
+import type { StorageAdapter, StorageConfig, EntityStore, ActionStore, EventStore, MacroEventStore, CommitStore, RepositoryStore } from './interfaces.js';
 /**
  * Main local storage adapter implementation
  */
@@ -13,6 +13,7 @@ export declare class LocalStorageAdapter implements StorageAdapter {
     readonly entities: EntityStore;
     readonly actions: ActionStore;
     readonly events: EventStore;
+    readonly macroEvents: MacroEventStore;
     readonly commits: CommitStore;
     readonly repository: RepositoryStore;
     constructor(config: StorageConfig);
@@ -27,6 +28,7 @@ export declare class LocalStorageAdapter implements StorageAdapter {
         entityCount: number;
         actionCount: number;
         eventCount: number;
+        macroEventCount: number;
         commitCount: number;
         storageSize?: number;
     }>;

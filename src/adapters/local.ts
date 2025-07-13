@@ -14,6 +14,7 @@ import type {
   EntityStore,
   ActionStore,
   EventStore,
+  MacroEventStore,
   CommitStore,
   RepositoryStore,
   ContentStore
@@ -22,6 +23,7 @@ import type {
   EntityObject, 
   ActionObject, 
   Event, 
+  MacroEvent,
   Commit, 
   Tree, 
   Branch, 
@@ -436,6 +438,128 @@ class LocalEventStore extends LocalContentStore<Event> implements EventStore {
 }
 
 /**
+ * Local MacroEvent store with component indexing (Phase 2)
+ */
+class LocalMacroEventStore extends LocalContentStore<MacroEvent> implements MacroEventStore {
+  private logicalIdIndex = new Map<string, string[]>();
+  private aggregationIndex = new Map<string, string[]>();
+  private componentIndex = new Map<string, string[]>();  // componentId -> macroEventIds
+  
+  constructor(baseDirectory: string) {
+    super(baseDirectory, 'objects/macro-events');
+  }
+  
+  async store(id: string, content: MacroEvent): Promise<void> {
+    await super.store(id, content);
+    await this.updateIndexes(content);
+  }
+  
+  async forceStore(id: string, content: MacroEvent): Promise<void> {
+    await super.forceStore(id, content);
+    await this.updateIndexes(content);
+  }
+  
+  async findByLogicalId(logicalId: string): Promise<MacroEvent[]> {
+    const ids = this.logicalIdIndex.get(logicalId) || [];
+    const macroEvents = await this.retrieveBatch(ids);
+    return macroEvents.filter((macro): macro is MacroEvent => macro !== null);
+  }
+  
+  async getLatestVersion(logicalId: string): Promise<MacroEvent | null> {
+    const macroEvents = await this.findByLogicalId(logicalId);
+    if (macroEvents.length === 0) return null;
+    
+    macroEvents.sort((a, b) => this.compareVersions(a.version, b.version));
+    return macroEvents[macroEvents.length - 1];
+  }
+  
+  async findByAggregation(aggregation: string): Promise<MacroEvent[]> {
+    const ids = this.aggregationIndex.get(aggregation) || [];
+    const macroEvents = await this.retrieveBatch(ids);
+    return macroEvents.filter((macro): macro is MacroEvent => macro !== null);
+  }
+  
+  async findByComponent(componentId: string): Promise<MacroEvent[]> {
+    const ids = this.componentIndex.get(componentId) || [];
+    const macroEvents = await this.retrieveBatch(ids);
+    return macroEvents.filter((macro): macro is MacroEvent => macro !== null);
+  }
+  
+  async search(query: {
+    title?: string;
+    aggregation?: string;
+    importance?: 1 | 2 | 3 | 4 | 5;
+  }): Promise<MacroEvent[]> {
+    const allIds = await this.list();
+    const macroEvents = await this.retrieveBatch(allIds);
+    
+    return macroEvents.filter((macro): macro is MacroEvent => {
+      if (!macro) return false;
+      
+      if (query.title && !macro.title.toLowerCase().includes(query.title.toLowerCase())) {
+        return false;
+      }
+      
+      if (query.aggregation && macro.aggregation !== query.aggregation) {
+        return false;
+      }
+      
+      if (query.importance && macro.importance !== query.importance) {
+        return false;
+      }
+      
+      return true;
+    });
+  }
+  
+  private async updateIndexes(macro: MacroEvent): Promise<void> {
+    // Logical ID index
+    const existingLogical = this.logicalIdIndex.get(macro.logicalId) || [];
+    if (!existingLogical.includes(macro['@id'])) {
+      existingLogical.push(macro['@id']);
+      this.logicalIdIndex.set(macro.logicalId, existingLogical);
+    }
+    
+    // Aggregation index
+    if (macro.aggregation) {
+      const existingAggregation = this.aggregationIndex.get(macro.aggregation) || [];
+      if (!existingAggregation.includes(macro['@id'])) {
+        existingAggregation.push(macro['@id']);
+        this.aggregationIndex.set(macro.aggregation, existingAggregation);
+      }
+    }
+    
+    // Component index - for each component, add this macro
+    if (macro.components) {
+      for (const componentRef of macro.components) {
+        const componentKey = `${componentRef.logicalId}${componentRef.version ? ':' + componentRef.version : ''}`;
+        const existingComponent = this.componentIndex.get(componentKey) || [];
+        if (!existingComponent.includes(macro['@id'])) {
+          existingComponent.push(macro['@id']);
+          this.componentIndex.set(componentKey, existingComponent);
+        }
+      }
+    }
+  }
+  
+  private compareVersions(a: string, b: string): number {
+    const aParts = a.split('.').map(Number);
+    const bParts = b.split('.').map(Number);
+    
+    for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+      const aPart = aParts[i] || 0;
+      const bPart = bParts[i] || 0;
+      
+      if (aPart !== bPart) {
+        return aPart - bPart;
+      }
+    }
+    
+    return 0;
+  }
+}
+
+/**
  * Local commit store with Git-like operations
  */
 class LocalCommitStore extends LocalContentStore<Commit> implements CommitStore {
@@ -639,6 +763,7 @@ export class LocalStorageAdapter implements StorageAdapter {
   public readonly entities: EntityStore;
   public readonly actions: ActionStore;
   public readonly events: EventStore;
+  public readonly macroEvents: MacroEventStore;  // Phase 2 addition
   public readonly commits: CommitStore;
   public readonly repository: RepositoryStore;
   
@@ -652,6 +777,7 @@ export class LocalStorageAdapter implements StorageAdapter {
     this.entities = new LocalEntityStore(baseDir);
     this.actions = new LocalActionStore(baseDir);
     this.events = new LocalEventStore(baseDir);
+    this.macroEvents = new LocalMacroEventStore(baseDir);  // Phase 2 addition
     this.commits = new LocalCommitStore(baseDir);
     this.repository = new LocalRepositoryStore(baseDir);
   }
@@ -662,6 +788,7 @@ export class LocalStorageAdapter implements StorageAdapter {
     await fs.mkdir(path.join(baseDir, 'objects', 'entities'), { recursive: true });
     await fs.mkdir(path.join(baseDir, 'objects', 'actions'), { recursive: true });
     await fs.mkdir(path.join(baseDir, 'objects', 'events'), { recursive: true });
+    await fs.mkdir(path.join(baseDir, 'objects', 'macro-events'), { recursive: true });  // Phase 2 addition
     await fs.mkdir(path.join(baseDir, 'objects', 'commits'), { recursive: true });
     await fs.mkdir(path.join(baseDir, 'objects', 'trees'), { recursive: true });
     await fs.mkdir(path.join(baseDir, 'refs', 'heads'), { recursive: true });
@@ -723,13 +850,15 @@ export class LocalStorageAdapter implements StorageAdapter {
     entityCount: number;
     actionCount: number;
     eventCount: number;
+    macroEventCount: number;
     commitCount: number;
     storageSize?: number;
   }> {
-    const [entityCount, actionCount, eventCount, commitCount] = await Promise.all([
+    const [entityCount, actionCount, eventCount, macroEventCount, commitCount] = await Promise.all([
       this.entities.count(),
       this.actions.count(),
       this.events.count(),
+      this.macroEvents.count(),  // Phase 2 addition
       this.commits.count()
     ]);
     
@@ -737,6 +866,7 @@ export class LocalStorageAdapter implements StorageAdapter {
       entityCount,
       actionCount,
       eventCount,
+      macroEventCount,
       commitCount
     };
   }
