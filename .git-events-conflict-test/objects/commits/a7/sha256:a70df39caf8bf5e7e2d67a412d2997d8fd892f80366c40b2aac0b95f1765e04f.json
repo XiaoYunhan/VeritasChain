@@ -1,0 +1,18 @@
+{
+  "@context": "https://schema.org/",
+  "@type": "UpdateAction",
+  "timestamp": "2025-07-13T14:40:22.184Z",
+  "parents": [],
+  "tree": "tree-base",
+  "author": "test-author",
+  "message": "Initial commit",
+  "changes": {
+    "entities": [
+      "sha256:a6cde94ef6fd566f2d17046eb6ea2845f171e5ad50b076c3ac62dc1da9d4b158"
+    ],
+    "actions": [],
+    "events": []
+  },
+  "branch": "main",
+  "@id": "sha256:a70df39caf8bf5e7e2d67a412d2997d8fd892f80366c40b2aac0b95f1765e04f"
+}

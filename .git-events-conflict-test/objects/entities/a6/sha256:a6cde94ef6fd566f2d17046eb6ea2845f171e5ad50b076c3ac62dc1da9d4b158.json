@@ -1,0 +1,18 @@
+{
+  "@context": "https://schema.org/",
+  "@type": "EntityObject",
+  "logicalId": "conflict-entity-001",
+  "version": "1.0",
+  "label": "Test Corporation",
+  "description": "A test corporation for conflict testing",
+  "dataType": {
+    "custom": "Corporation"
+  },
+  "properties": {
+    "revenue": "$100M",
+    "employees": 500,
+    "industry": "Technology"
+  },
+  "commitHash": "base-commit",
+  "@id": "sha256:a6cde94ef6fd566f2d17046eb6ea2845f171e5ad50b076c3ac62dc1da9d4b158"
+}

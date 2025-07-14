@@ -20,7 +20,8 @@
     "test:branches": "npm run build && node tests/integration/branches/branches.test.js", 
     "test:merge": "npm run build && node tests/integration/merge/merge.test.js",
     "test:macro-merge": "npm run build && node tests/integration/macro-merge/macro-merge.test.js",
-    "test:phase2": "npm run test:api && npm run test:branches && npm run test:merge && npm run test:macro-merge",
+    "test:conflict-resolution": "npm run build && node tests/integration/conflict-resolution/conflict-resolution.test.js",
+    "test:phase2": "npm run test:api && npm run test:branches && npm run test:merge && npm run test:macro-merge && npm run test:conflict-resolution",
     
     "test:legacy": "npm run build && node tests/storage-integration.js",
     "test:legacy:force": "npm run build && node tests/storage-integration.js --force",

@@ -1114,3 +1114,147 @@ Remember: This is a foundation for a decentralized system. Every decision should
 3. **Don't create complex legal reasoning** - Simple deontic actions only
 4. **Don't build advanced applications** - Save compliance monitoring, smart contracts for Phase 4
 5. **Don't optimize** - Clarity over performance
+
+## Phase 2 Additions: Advanced Conflict Resolution
+
+### Conflict Detection and Resolution System (Phase 2.3)
+
+**New Core Files:**
+```
+src/repository/
+├── conflict-resolver.ts    # Advanced conflict resolution strategies
+├── conflict-display.ts     # Visualization and export utilities  
+└── merge.ts               # Enhanced with composite event conflicts
+
+tests/integration/
+└── conflict-resolution/    # Comprehensive conflict resolution tests
+```
+
+### Resolution Strategies (Priority-Based)
+```typescript
+interface ResolutionStrategy {
+  name: string;
+  priority: number;           // 60-90, higher = more preferred
+  applicableTypes: ConflictType[];
+  evaluate: (conflict: MergeConflict) => Promise<ConflictResolution | null>;
+}
+
+// Built-in strategies:
+1. Legal hierarchy resolution (priority: 90) - constitution > statute > regulation > case-law > contract > policy
+2. Component version resolution (priority: 85) - prefer latest versions, resolve version conflicts
+3. Confidence-based resolution (priority: 80) - prefer higher confidence scores
+4. Semantic text merging (priority: 70) - intelligent text content merging
+5. Temporal precedence (priority: 60) - prefer more recent changes
+```
+
+### Conflict Types Extended
+```typescript
+export type ConflictType = 
+  | 'content'        // Content differences in same object
+  | 'structural'     // Different object types for same logical ID
+  | 'relationship'   // Conflicting relationships between objects
+  | 'statement'      // Conflicting logical statements
+  | 'metadata'       // Metadata conflicts (confidence, etc.)
+  | 'version'        // Version numbering conflicts
+  | 'component'      // Composite event component conflicts
+  | 'aggregation';   // Composite event aggregation logic conflicts
+```
+
+### Conflict Visualization Features
+```typescript
+// CLI Display (colorized)
+displayConflictsInTerminal(conflicts, {
+  colorize: true,
+  showSuggestions: true,
+  includeMetadata: true,
+  maxWidth: 100
+});
+
+// Export Formats
+ConflictDisplay.export(conflicts, resolutions, 'json');      // Structured data
+ConflictDisplay.export(conflicts, resolutions, 'markdown'); // Documentation
+ConflictDisplay.export(conflicts, resolutions, 'csv');      // Analysis
+
+// Example CLI Output:
+// 🔥 MERGE CONFLICTS DETECTED
+// ═══════════════════════════
+// 📊 Summary: 3 conflicts found
+//    Auto-resolvable: 1/3
+//    Critical: 1
+//    Recommended action: REVIEW
+//
+// 🚨 CRITICAL CONFLICTS (1)
+// ─────────────────────────
+// 1. EVENT composite-event-456
+//    Property: aggregation
+//    Type: aggregation
+//    📋 THREE-WAY COMPARISON:
+//    Base:   "ALL"
+//    Ours:   "ORDERED" 
+//    Theirs: "ANY"
+```
+
+### Usage Pattern for Advanced Resolution
+```typescript
+// Standard three-way merge with enhanced conflict detection
+const mergeResult = await mergeManager.mergeBranches('feature', 'main', {
+  strategy: 'auto',
+  conflictResolution: {
+    autoResolve: true,
+    confidenceThreshold: 0.7
+  }
+});
+
+// Advanced resolution for unresolved conflicts
+const resolver = new AdvancedConflictResolver(storage);
+const resolutionResult = await resolver.resolveConflicts(mergeResult.conflicts, {
+  autoResolveThreshold: 0.8,
+  preserveHistory: true,
+  interactive: false
+});
+
+// Display and export for manual review
+displayConflictsInTerminal(resolutionResult.unresolved);
+const report = ConflictDisplay.export(conflicts, resolutions, 'markdown');
+```
+
+### Legal-Specific Conflict Resolution
+```typescript
+// Automatic resolution based on legal source hierarchy
+const legalHierarchy = {
+  'constitution': 6,
+  'statute': 5, 
+  'regulation': 4,
+  'case-law': 3,
+  'contract': 2,
+  'policy': 1
+};
+
+// Example: Statute vs Regulation conflict
+// Result: Statute takes precedence automatically
+// Confidence: (5-4)/6 = 0.17 (normalized hierarchy difference)
+```
+
+### Test Commands
+```bash
+# Run conflict resolution tests
+npm run test:conflict-resolution
+
+# All Phase 2 tests
+npm run test:phase2
+
+# Individual test suites
+npm run test:api              # HTTP API tests
+npm run test:branches         # Branch management tests  
+npm run test:merge            # Three-way merge tests
+```
+
+### Key Design Principles - Phase 2
+
+1. **Extensible Strategy Architecture** - Easy to add new resolution strategies
+2. **Legal Hierarchy Awareness** - Built-in understanding of legal source precedence
+3. **Confidence-Based Decisions** - Automatic resolution using transparency principles
+4. **Interactive Fallback** - Framework for manual resolution when auto-resolution fails
+5. **Comprehensive Visualization** - Multiple export formats for conflict analysis
+6. **Resolution History** - Track decisions for learning and audit trails
+7. **Zero Breaking Changes** - All Phase 1 functionality preserved and enhanced
